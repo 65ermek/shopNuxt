@@ -114,7 +114,7 @@
 .logo-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #ffffff;
+  color: #7c7b7b;
   letter-spacing: -0.5px;
 }
 
@@ -137,7 +137,7 @@
 .footer-heading {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #555454;
   margin-bottom: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
