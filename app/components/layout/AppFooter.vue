@@ -22,7 +22,7 @@
           <h5 class="footer-heading">Informace</h5>
           <ul class="footer-links">
             <li><NuxtLink to="/jak-objednat">Jak objednat</NuxtLink></li>
-            <li><NuxtLink to="/pro-firmy">Pro firmy a instituce</NuxtLink></li>
+            <li><NuxtLink to="/pro-firmy-a-instituce">Pro firmy a instituce</NuxtLink></li>
             <li><NuxtLink to="/obchodni-podminky">Obchodní podmínky</NuxtLink></li>
             <li><NuxtLink to="/reklamace">Reklamace a vrácení</NuxtLink></li>
           </ul>
@@ -114,7 +114,7 @@
 .logo-title {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #ffffff;
+  color: #7c7b7b;
   letter-spacing: -0.5px;
 }
 
@@ -137,7 +137,7 @@
 .footer-heading {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #555454;
   margin-bottom: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
