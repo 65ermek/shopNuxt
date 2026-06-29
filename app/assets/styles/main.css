@@ -1,0 +1,26 @@
+/* app/assets/styles/main.css */
+
+/* Убираем отступы у body */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Убираем padding у всех контейнеров, если они есть */
+.container-custom {
+    max-width: 1270px;
+    margin: 0 auto;
+    padding: 0 !important; /* убираем внутренние отступы */
+    width: 100%;
+}
+
+/* Для header-inner и footer-inner тоже убираем padding */
+.header-inner,
+.footer-inner {
+    padding: 0 !important;
+}
+
+/* Убираем padding у main, если есть */
+.main-content {
+    padding: 0 !important;
+}

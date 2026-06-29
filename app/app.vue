@@ -1,7 +1,10 @@
 <template>
-  <div>
-    <h1>Добро пожаловать в NUXT-SHOP! 🛒</h1>
-    <p>Магазин на Nuxt 4</p>
-    <NuxtLink to="/catalog">Перейти в каталог</NuxtLink>
-  </div>
+  <NuxtLayout :name="layout">
+    <NuxtPage />
+  </NuxtLayout>
 </template>
+
+<script setup>
+const route = useRoute();
+const layout = computed(() => route.meta.layout || 'default');
+</script>
