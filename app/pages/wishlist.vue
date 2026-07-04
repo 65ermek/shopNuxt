@@ -8,6 +8,7 @@
 
       <!-- Правая колонка: Основной контент (75%) -->
       <section class="wishlist-content">
+        <Breadcrumbs />
         <h1 class="wishlist-title">❤️ Oblíbené položky</h1>
         <p class="wishlist-subtitle" v-if="favoriteItems.length > 0">
           Máte {{ favoriteItems.length }} {{ favoriteItems.length === 1 ? 'položku' : 'položek' }} v oblíbených
@@ -90,6 +91,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
 import ConfirmModal from '~/components/common/ConfirmModal.vue'
+import Breadcrumbs from "~/components/common/Breadcrumbs.vue";
 
 const cartStore = useCartStore()
 const isLoading = ref(true)

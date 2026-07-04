@@ -8,10 +8,8 @@
 
       <!-- Правая колонка: Основной контент (75%) -->
       <section class="home-content">
-        <h1 class="home-title">Dobře naložené! 🛒</h1>
-        <p class="home-subtitle">Vítejte na hlavní stránce vašeho internetového obchodu.</p>
+        <HeroCarousel />
 
-        <!-- Блок с преимуществами -->
         <div class="home-features">
           <div class="feature-item">
             <span class="feature-icon">🚚</span>
@@ -50,27 +48,17 @@
           </div>
         </div>
 
-        <!-- Секция "Z naší nabídky" -->
-        <div class="home-products">
-          <div class="products-header">
-            <h2>Z naší nabídky</h2>
-            <NuxtLink to="/catalog" class="show-all-link">Zobrazit vše →</NuxtLink>
-          </div>
-          <div class="products-grid">
-            <!-- Здесь будут карточки товаров -->
-            <div class="product-placeholder">Товар 1</div>
-            <div class="product-placeholder">Товар 2</div>
-            <div class="product-placeholder">Товар 3</div>
-            <div class="product-placeholder">Товар 4</div>
-          </div>
-        </div>
+        <!-- Секция "Z naší nabídky" с товарами -->
+        <FeaturedProducts />
       </section>
     </div>
   </div>
 </template>
 
 <script setup>
-// Компонент CategoryMenu импортируется автоматически
+// Компоненты импортируются автоматически
+import HeroCarousel from "~/components/home/HeroCarousel.vue";
+import FeaturedProducts from "~/components/home/FeaturedProducts.vue";
 </script>
 
 <style scoped>
@@ -90,17 +78,10 @@
 }
 
 /* ===== Правая колонка ===== */
-.home-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-}
-
-.home-subtitle {
-  font-size: 1.1rem;
-  color: #4b5563;
-  margin: 0 0 24px 0;
+.home-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* ===== Преимущества ===== */
@@ -111,7 +92,6 @@
   background-color: #f8fafc;
   padding: 16px;
   border-radius: 8px;
-  margin-bottom: 32px;
 }
 
 .feature-item {
@@ -138,72 +118,22 @@
   margin: 0;
 }
 
-/* ===== Секция товаров ===== */
-.products-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.products-header h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-}
-
-.show-all-link {
-  color: #e11d48;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.show-all-link:hover {
-  text-decoration: underline;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.product-placeholder {
-  background-color: #f1f5f9;
-  border-radius: 8px;
-  padding: 40px 20px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.9rem;
-}
-
 /* ===== Адаптивность ===== */
 @media (max-width: 992px) {
   .home-grid {
     grid-template-columns: 1fr;
   }
-
   .home-sidebar {
     min-width: auto;
   }
-
   .home-features {
     grid-template-columns: repeat(3, 1fr);
-  }
-
-  .products-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 576px) {
   .home-features {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .products-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

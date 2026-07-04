@@ -29,7 +29,7 @@
           </div>
           <button
               class="cart-item-remove"
-              @click.stop="removeItem(item.id)"
+              @click.stop="openRemoveModal(item)"
               aria-label="Odebrat z košíku"
               :disabled="isRemoving"
           >
@@ -49,12 +49,21 @@
       </div>
       <a href="/cart" class="cart-popup-btn">Přejít do košíku</a>
     </template>
+
+    <!-- Модальное окно подтверждения -->
+    <ConfirmModal
+        :is-visible="showModal"
+        :item-name="modalItemName"
+        @confirm="confirmRemove"
+        @cancel="closeModal"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
+import ConfirmModal from '~/components/common/ConfirmModal.vue'
 
 const props = defineProps({
   isVisible: {
@@ -71,6 +80,11 @@ const emit = defineEmits(['close', 'item-removed'])
 
 const cartStore = useCartStore()
 const isRemoving = ref(false)
+
+// Состояния модалки
+const showModal = ref(false)
+const modalItem = ref(null)
+const modalItemName = ref('')
 
 // ✅ Получение названия товара
 const getProductName = (item) => {
@@ -126,14 +140,30 @@ const handleImageError = (e) => {
   e.target.src = '/images/no-image.png'
 }
 
-// ✅ Удаление товара
-const removeItem = async (cartItemId) => {
-  if (!cartItemId || isRemoving.value) return
+// ✅ Открыть модалку подтверждения удаления
+const openRemoveModal = (item) => {
+  modalItem.value = item
+  modalItemName.value = getProductName(item) || 'tuto položku'
+  showModal.value = true
+}
+
+// ✅ Закрыть модалку
+const closeModal = () => {
+  showModal.value = false
+  modalItem.value = null
+  modalItemName.value = ''
+}
+
+// ✅ Подтверждение удаления
+const confirmRemove = async () => {
+  if (!modalItem.value?.id || isRemoving.value) return
 
   isRemoving.value = true
   try {
-    await cartStore.removeItem(cartItemId)
+    const currentType = modalItem.value.type || 'cart'
+    await cartStore.removeItemWithMove(modalItem.value.id, currentType)
     emit('item-removed')
+    closeModal()
   } catch (error) {
     console.error('Chyba při odstraňování položky:', error)
   } finally {
@@ -157,6 +187,7 @@ const cartTotalPriceWithoutVat = computed(() => {
 </script>
 
 <style scoped>
+/* ===== ОБЩИЕ СТИЛИ ===== */
 .cart-popup {
   position: absolute;
   top: 100%;

@@ -131,7 +131,9 @@ const isRemoving = ref(false)
 const showModal = ref(false)
 const modalItem = ref(null)
 const modalItemName = ref('')
-const cartItems = computed(() => cartStore.items)
+const cartItems = computed(() => {
+  return cartStore.items.filter(item => item.type === 'cart')
+})
 
 // ✅ Отслеживаем изменения cartItems (для диагностики)
 watch(cartItems, (newItems) => {
