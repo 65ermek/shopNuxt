@@ -16,7 +16,7 @@
             type="text"
             class="search-input"
             placeholder="Hledat produkty..."
-        />
+        >
         <button class="search-btn">🔍</button>
       </div>
 
@@ -31,7 +31,7 @@
         </div>
 
         <div class="navbar-cart">
-          <span class="cart-price">1 ks<br/>za 110,72 Kč</span>
+          <span class="cart-price">1 ks<br>za 110,72 Kč</span>
           <NuxtLink to="/cart" class="cart-btn">
             <span class="cart-icon">🛒</span>
             <span class="cart-badge">0</span>
