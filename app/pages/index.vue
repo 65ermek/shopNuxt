@@ -8,7 +8,8 @@
 
       <!-- Правая колонка: Основной контент (75%) -->
       <section class="home-content">
-        <HomeHeroCarousel />
+        <h1 class="home-title">Dobře naložené! 🛒</h1>
+        <p class="home-subtitle">Vítejte na hlavní stránce vašeho internetového obchodu.</p>
 
         <!-- Блок с преимуществами -->
         <div class="home-features">
@@ -55,7 +56,13 @@
             <h2>Z naší nabídky</h2>
             <NuxtLink to="/catalog" class="show-all-link">Zobrazit vše →</NuxtLink>
           </div>
-          <FeaturedProducts />
+          <div class="products-grid">
+            <!-- Здесь будут карточки товаров -->
+            <div class="product-placeholder">Товар 1</div>
+            <div class="product-placeholder">Товар 2</div>
+            <div class="product-placeholder">Товар 3</div>
+            <div class="product-placeholder">Товар 4</div>
+          </div>
         </div>
       </section>
     </div>
@@ -64,7 +71,6 @@
 
 <script setup>
 // Компонент CategoryMenu импортируется автоматически
-import FeaturedProducts from "~/components/home/FeaturedProducts.vue";
 </script>
 
 <style scoped>
