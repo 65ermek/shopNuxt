@@ -48,7 +48,7 @@ onBeforeUnmount(() => {
   width: 44px;
   height: 44px;
   border-radius: 10%;
-  background-color: #7edffd;
+  background-color: #007bff;
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
@@ -69,7 +69,7 @@ onBeforeUnmount(() => {
 }
 
 .scroll-top-btn:hover {
-  background-color: #1db3e1;
+  background-color: #0056b3;
   opacity: 1;
   transform: scale(1.05);
 }

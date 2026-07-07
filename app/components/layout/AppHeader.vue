@@ -39,8 +39,8 @@
             </div>
           </div>
 
-          <!-- Избранное (Wishlist) -->
-          <NuxtLink to="/wishlist" class="wishlist-btn">
+          <!-- Избранное (oblibene) -->
+          <NuxtLink to="/oblibene" class="wishlist-btn">
             <span class="wishlist-icon">♥</span>
             <span class="wishlist-badge">{{ wishlistCount }}</span>
           </NuxtLink>

@@ -84,7 +84,11 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-// import LoginPopup from '~/components/common/LoginPopup.vue' // Автоимпорт
+import { useCartStore } from '~/stores/cartStore'
+import LoginPopup from '~/components/common/LoginPopup.vue'
+
+// ✅ Создаем экземпляр store
+const cartStore = useCartStore()
 
 // Состояния
 const showPopup = ref(false)
@@ -144,14 +148,31 @@ const closePopup = () => {
 // Обработка успешного входа
 const handleLogin = (data) => {
   if (!import.meta.client) return
-  console.log('Přihlášení úspěšné:', data)
+
+  console.log('✅ Přihlášení úspěšné:', data)
+
+  // Сохраняем токен и данные пользователя
+  if (data.token) {
+    localStorage.setItem('token', data.token)
+  }
+  if (data.customer) {
+    localStorage.setItem('customer', JSON.stringify(data.customer))
+  }
+
+  // Обновляем состояние
   isLoggedIn.value = true
-  userName.value = data.customer.name || 'Uživatel'
+  userName.value = data.customer?.name || 'Uživatel'
   customerData.value = data.customer
-  if (data.customer.avatar) {
+
+  if (data.customer?.avatar) {
     userAvatar.value = `https://obchod.tanatar.cz${data.customer.avatar}`
   }
+
   closePopup()
+
+  // ✅ Загружаем корзину ПОСЛЕ входа
+  console.log('🔄 Обновляем корзину после входа...')
+  cartStore.fetchCart()
 }
 
 // Обработка ошибки аватара
@@ -182,6 +203,9 @@ const handleLogout = async () => {
   userName.value = ''
   customerData.value = null
   isUserMenuOpen.value = false
+
+  // ✅ Очищаем корзину после выхода
+  cartStore.fetchCart()
   navigateTo('/')
 }
 
@@ -216,6 +240,9 @@ onMounted(() => {
   if (!import.meta.client) return
   initAuth()
   document.addEventListener('click', handleClickOutside)
+
+  // ✅ Загружаем корзину при загрузке страницы
+  cartStore.fetchCart()
 })
 
 onBeforeUnmount(() => {
@@ -226,6 +253,11 @@ onBeforeUnmount(() => {
     closeTimeout = null
   }
 })
+
+// Заглушка для блокировки ссылок
+const blockLink = () => {
+  console.log('🔗 Ссылка временно заблокирована')
+}
 </script>
 
 <style scoped>

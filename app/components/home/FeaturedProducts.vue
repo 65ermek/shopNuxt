@@ -1,5 +1,12 @@
 <template>
   <div class="featured-products">
+    <div class="products-header">
+      <h2>⭐ Doporučujeme</h2>
+      <NuxtLink to="/produkty" class="show-all-link">
+        Zobrazit vše →
+      </NuxtLink>
+    </div>
+
     <div v-if="pending" class="products-grid">
       <div v-for="n in 4" :key="n" class="product-skeleton">
         <div class="skeleton-image"></div>
@@ -8,9 +15,9 @@
       </div>
     </div>
 
-    <div v-else-if="products.length" class="products-grid">
+    <div v-else-if="featuredProducts.length" class="products-grid">
       <ProductCard
-          v-for="product in products"
+          v-for="product in featuredProducts"
           :key="product.id"
           :product="product"
       />
@@ -21,11 +28,40 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import ProductCard from '../products/ProductCard.vue'
 
 // Получаем товары с API
 const { data: products, pending } = await useFetch('https://obchod.tanatar.cz/api/products')
-console.log('Products data:', products.value)
+
+// Фильтруем только избранные товары (is_featured = 1)
+const featuredProducts = computed(() => {
+  if (!products.value) return []
+
+  let items = []
+  if (Array.isArray(products.value)) {
+    items = products.value
+  } else if (products.value?.data && Array.isArray(products.value.data)) {
+    items = products.value.data
+  }
+
+  // Фильтруем избранные и добавляем полный URL для изображений
+  return items
+      .filter(p => p.is_featured === 1)
+      .map(product => ({
+        ...product,
+        image: product.image
+            ? `https://obchod.tanatar.cz/${product.image}`
+            : null,
+        discount: product.old_price && product.old_price > product.price
+            ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
+            : null,
+        in_stock: product.in_stock === 1 || product.in_stock === true,
+        is_new: new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      }))
+})
+
+console.log('Featured products:', featuredProducts.value?.length || 0)
 </script>
 
 <style scoped>
@@ -48,12 +84,15 @@ console.log('Products data:', products.value)
 }
 
 .show-all-link {
-  color: #e11d48;
+  color: #46a3fa;
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.9rem;
+  transition: color 0.2s;
 }
 
 .show-all-link:hover {
+  color: #2c7fd4;
   text-decoration: underline;
 }
 
@@ -112,6 +151,10 @@ console.log('Products data:', products.value)
 @media (max-width: 576px) {
   .products-grid {
     grid-template-columns: 1fr;
+  }
+
+  .products-header h2 {
+    font-size: 1.2rem;
   }
 }
 </style>

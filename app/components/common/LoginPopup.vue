@@ -74,18 +74,20 @@ const SAVED_EMAIL_KEY = 'saved_login_email'
 
 // Сохранение email при вводе
 const saveEmailToStorage = () => {
-  if (!import.meta.client) return
-  if (form.value.email) {
-    localStorage.setItem(SAVED_EMAIL_KEY, form.value.email)
+  if (typeof window !== 'undefined') {
+    if (form.value.email) {
+      localStorage.setItem(SAVED_EMAIL_KEY, form.value.email)
+    }
   }
 }
 
 // Загрузка сохраненного email
 const loadSavedEmail = () => {
-  if (!import.meta.client) return
-  const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY)
-  if (savedEmail) {
-    form.value.email = savedEmail
+  if (typeof window !== 'undefined') {
+    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY)
+    if (savedEmail) {
+      form.value.email = savedEmail
+    }
   }
 }
 
@@ -115,18 +117,21 @@ const handleLogin = async () => {
     const data = await response.json()
 
     if (response.ok) {
-      // Успешный вход - сохраняем email для будущих входов
+      // ✅ Успешный вход
       saveEmailToStorage()
 
+      // ✅ Передаем данные в родительский компонент
       emit('login', {
         customer: data.customer,
         token: data.token
       })
-      emit('close')
 
-      // Очищаем пароль, но email оставляем в storage
+      // Очищаем пароль
       form.value.password = ''
       errorMessage.value = ''
+
+      // ✅ Закрываем попап
+      emit('close')
     } else {
       errorMessage.value = data.error || 'Přihlášení selhalo'
     }
@@ -142,7 +147,6 @@ const handleLogin = async () => {
 const close = () => {
   emit('close')
   errorMessage.value = ''
-  // При закрытии сохраняем email, если он есть
   if (form.value.email) {
     saveEmailToStorage()
   }
@@ -158,11 +162,9 @@ const goToRegister = () => {
 }
 
 // ===== НАБЛЮДАТЕЛЬ ЗА ВИДИМОСТЬЮ =====
-// При открытии попапа загружаем сохраненный email
 watch(() => props.isVisible, (newVal) => {
   if (newVal) {
     loadSavedEmail()
-    // Очищаем ошибки при открытии
     errorMessage.value = ''
   }
 }, { immediate: true })
