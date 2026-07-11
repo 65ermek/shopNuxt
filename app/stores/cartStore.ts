@@ -16,7 +16,7 @@ interface Product {
     is_new?: boolean
     category_id?: number
     created_at?: string
-    [key: string]: unknown // ✅ вместо any используем unknown
+    [key: string]: unknown
 }
 
 interface CartItem {
@@ -33,10 +33,9 @@ interface CartItem {
     created_at?: string
     updated_at?: string
     deleted_at?: string | null
-    [key: string]: unknown // ✅ вместо any используем unknown
+    [key: string]: unknown
 }
 
-// ✅ Добавляем интерфейс для ответа от сервера
 interface CartResponse {
     id?: number
     cart?: CartItem
@@ -48,7 +47,7 @@ interface CartResponse {
 interface ApiResponse {
     cart?: CartItem[]
     data?: CartItem[]
-    [key: string]: unknown // ✅ вместо any
+    [key: string]: unknown
 }
 
 export const useCartStore = defineStore('cart', () => {
@@ -87,28 +86,25 @@ export const useCartStore = defineStore('cart', () => {
 
     // 🔧 Инициализация session_id
     const initSession = (): string | null => {
-        // ✅ Используем проверку на наличие window (клиент)
         if (typeof window !== 'undefined') {
             let session = localStorage.getItem('session_id')
-
             if (!session) {
                 session = 'guest_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)
                 localStorage.setItem('session_id', session)
             }
-
             sessionId.value = session
             console.log('🆔 Session ID:', sessionId.value)
             return sessionId.value
         }
         return null
     }
+
     // 📦 Загрузка корзины с сервера
     const fetchCart = async (): Promise<CartItem[]> => {
         try {
             loading.value = true
             error.value = null
 
-            // ✅ Проверяем, авторизован ли пользователь
             let token = null
             let customerId = null
 
@@ -131,22 +127,18 @@ export const useCartStore = defineStore('cart', () => {
             console.log('🔍 customer_id:', customerId)
             console.log('🔍 session_id:', sid)
 
-            // ✅ Формируем параметры
             const params: Record<string, string> = {}
             params['session_id'] = sid || ''
 
-            // Если есть customer_id, добавляем его
             if (customerId) {
                 params['customer_id'] = String(customerId)
             }
 
-            // ✅ Формируем заголовки
             const headers: Record<string, string> = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
 
-            // ✅ Если есть токен - добавляем Authorization
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`
                 console.log('🔑 Токен добавлен в заголовки')
@@ -200,7 +192,6 @@ export const useCartStore = defineStore('cart', () => {
         try {
             loading.value = true
 
-            // ✅ Получаем токен и customer_id
             let token = null
             let customerId = null
 
@@ -211,13 +202,12 @@ export const useCartStore = defineStore('cart', () => {
                     try {
                         const customer = JSON.parse(customerData)
                         customerId = customer.id
-                    } catch (e) {}
+                    } catch (e) { /* empty */ }
                 }
             }
 
             const sid = sessionId.value || initSession()
 
-            // Проверяем для корзины
             if (type === 'cart') {
                 const existingItem = cartItems.value.find(
                     item => item.product_id === product.id
@@ -229,7 +219,6 @@ export const useCartStore = defineStore('cart', () => {
                 }
             }
 
-            // Проверяем для избранного
             if (type === 'favorite') {
                 const existingItem = favoriteItems.value.find(
                     item => item.product_id === product.id
@@ -240,7 +229,6 @@ export const useCartStore = defineStore('cart', () => {
                 }
             }
 
-            // ✅ Формируем заголовки
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
             }
@@ -248,22 +236,19 @@ export const useCartStore = defineStore('cart', () => {
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            // ✅ Формируем тело запроса
-            const body: Record<string, any> = {
+            const body: Record<string, unknown> = {
                 session_id: sid,
                 product_id: product.id,
                 quantity: quantity,
                 type: type
             }
 
-            // ✅ Если есть customer_id - добавляем в запрос
             if (customerId) {
                 body.customer_id = customerId
             }
 
             console.log('🔍 Отправка запроса:', { headers, body })
 
-            // Отправляем запрос на сервер
             const response = await $fetch<CartResponse>(`${API_BASE_URL}/api/cart`, {
                 method: 'POST',
                 headers: headers,
@@ -272,7 +257,6 @@ export const useCartStore = defineStore('cart', () => {
 
             console.log(`✅ Добавлено в ${type === 'favorite' ? 'избранное' : 'корзину'}:`, response)
 
-            // ... остальной код (создание newItem и т.д.)
             let newId: number
             if (response.cart && typeof response.cart === 'object' && 'id' in response.cart) {
                 newId = (response.cart as CartItem).id
@@ -295,8 +279,6 @@ export const useCartStore = defineStore('cart', () => {
             items.value.push(newItem)
 
             saveToLocalStorage()
-
-            // Обновляем данные с сервера для синхронизации
             await fetchCart()
 
         } catch (err) {
@@ -307,6 +289,7 @@ export const useCartStore = defineStore('cart', () => {
             loading.value = false
         }
     }
+
     // 🔄 Обновление количества
     const updateItem = async (itemId: number, quantity: number): Promise<void> => {
         try {
@@ -327,6 +310,41 @@ export const useCartStore = defineStore('cart', () => {
 
         } catch (err) {
             console.error('❌ Ошибка обновления:', err)
+            error.value = err instanceof Error ? err.message : 'Unknown error'
+            throw err
+        } finally {
+            loading.value = false
+        }
+    }
+
+    // 🔄 Обновление количества
+    const updateQuantity = async (itemId: number, quantity: number): Promise<void> => {
+        try {
+            loading.value = true
+
+            const item = items.value.find(i => i.id === itemId)
+            if (!item) {
+                console.error('❌ Товар не найден в корзине:', itemId)
+                return
+            }
+
+            if (quantity <= 0) {
+                await removeItem(itemId)
+                return
+            }
+
+            await $fetch(`${API_BASE_URL}/api/cart/${itemId}`, {
+                method: 'PUT',
+                body: { quantity }
+            })
+
+            item.quantity = quantity
+
+            saveToLocalStorage()
+            await fetchCart()
+
+        } catch (err) {
+            console.error('❌ Ошибка обновления количества:', err)
             error.value = err instanceof Error ? err.message : 'Unknown error'
             throw err
         } finally {
@@ -374,7 +392,6 @@ export const useCartStore = defineStore('cart', () => {
 
             console.log('📧 Email обновлен:', email)
 
-            // Обновляем локальные данные
             items.value = items.value.map(item => ({
                 ...item,
                 email: email
@@ -394,36 +411,96 @@ export const useCartStore = defineStore('cart', () => {
         }
     }
 
-    // 🔗 Объединение корзины с пользователем (после регистрации)
-    const mergeCartWithUser = async (customerId: number): Promise<{ success: boolean; message?: string }> => {
+    // ============================================================
+    // ✅ НОВЫЙ МЕТОД: Объединение корзины с пользователем (с email)
+    // ============================================================
+    const mergeCartWithUser = async (customerId: number, email?: string): Promise<{ success: boolean; message?: string }> => {
         try {
             loading.value = true
+            error.value = null
 
             const sid = sessionId.value || initSession()
 
-            const response = await $fetch<{ success: boolean; message?: string }>(`${API_BASE_URL}/api/cart/merge`, {
+            console.log('🔄 Объединение корзины с пользователем:', {
+                customerId,
+                sessionId: sid,
+                email: email || 'не указан'
+            })
+
+            // Проверяем, есть ли гостевые товары
+            const guestItems = items.value.filter(item =>
+                item.session_id === sid &&
+                (item.customer_id === null || item.customer_id === undefined) &&
+                item.type !== 'history'
+            )
+
+            console.log('📦 Гостевые товары:', guestItems.length)
+
+            if (guestItems.length === 0) {
+                console.log('ℹ️ Нет гостевых товаров для объединения')
+                // Обновляем session_id
+                sessionId.value = `user_${customerId}_${Date.now()}`
+                localStorage.setItem('session_id', sessionId.value)
+                await fetchCart()
+                return { success: true, message: 'No guest items to merge' }
+            }
+
+            // Отправляем запрос на объединение
+            const response = await $fetch<{
+                success: boolean;
+                message?: string;
+                merged?: number;
+                updated?: number;
+                total?: number;
+            }>(`${API_BASE_URL}/api/cart/merge`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: {
                     session_id: sid,
-                    customer_id: customerId
+                    customer_id: customerId,
+                    email: email || null
                 }
             })
 
-            console.log('🔄 Корзина объединена с пользователем:', response)
+            console.log('🔄 Результат объединения:', response)
 
+            if (!response.success) {
+                throw new Error(response.message || 'Ошибка объединения корзины')
+            }
+
+            // Обновляем session_id
+            sessionId.value = `user_${customerId}_${Date.now()}`
+            localStorage.setItem('session_id', sessionId.value)
+
+            // Перезагружаем корзину
             await fetchCart()
 
-            return response
+            console.log('✅ Корзина объединена с пользователем')
+
+            return {
+                success: true,
+                message: response.message || `Объединено ${response.merged || 0} товаров, обновлено ${response.updated || 0}`
+            }
 
         } catch (err) {
             console.error('❌ Ошибка объединения корзины:', err)
             error.value = err instanceof Error ? err.message : 'Unknown error'
+
+            // В случае ошибки все равно пытаемся обновить корзину
+            try {
+                await fetchCart()
+            } catch (e) {
+                console.error('Ошибка обновления корзины после ошибки:', e)
+            }
+
             throw err
         } finally {
             loading.value = false
         }
     }
-
     // 🗑 Очистка корзины
     const clearCart = async (): Promise<void> => {
         try {
@@ -451,7 +528,6 @@ export const useCartStore = defineStore('cart', () => {
 
     // 💾 Сохранение в localStorage
     const saveToLocalStorage = (): void => {
-        // ✅ Используем проверку на наличие window (клиент)
         if (typeof window !== 'undefined') {
             try {
                 localStorage.setItem('cart_data', JSON.stringify(items.value))
@@ -466,7 +542,6 @@ export const useCartStore = defineStore('cart', () => {
 
     // 📂 Загрузка из localStorage
     const loadFromLocalStorage = (): void => {
-        // ✅ Используем проверку на наличие window (клиент)
         if (typeof window !== 'undefined') {
             try {
                 const saved = localStorage.getItem('cart_data')
@@ -485,7 +560,6 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     // Инициализация
-    // ✅ Используем проверку на наличие window (клиент)
     if (typeof window !== 'undefined') {
         initSession()
         loadFromLocalStorage()
@@ -505,10 +579,11 @@ export const useCartStore = defineStore('cart', () => {
         initSession,
         fetchCart,
         addItem,
+        updateQuantity,
         updateItem,
         removeItem,
         setUserEmail,
-        mergeCartWithUser,
+        mergeCartWithUser, // ✅ теперь принимает (customerId, email?)
         clearCart,
         saveToLocalStorage,
         loadFromLocalStorage

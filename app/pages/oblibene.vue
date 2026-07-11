@@ -87,6 +87,7 @@ import { useCartStore } from '~/stores/cartStore'
 import { useWishlistStore } from '~/stores/wishlistStore'
 import ConfirmModal from '~/components/common/ConfirmModal.vue'
 import Breadcrumbs from "~/components/common/Breadcrumbs.vue";
+import { formatPrice } from '~/utils/formatPrice'
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
@@ -133,10 +134,6 @@ const getProductImage = (item) => {
 }
 const handleImageError = (e) => {
   e.target.src = '/assets/images/no-image.png'  // ← исправлено
-}
-const formatPrice = (price) => {
-  if (price === undefined || price === null || isNaN(price)) return '0,00'
-  return price.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 const addToCart = async (item) => {
   if (isAdding.value) return

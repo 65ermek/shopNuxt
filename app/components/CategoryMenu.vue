@@ -9,7 +9,11 @@
 
       <!-- Реальные категории -->
       <li v-else v-for="category in categories" :key="category.id">
-        <NuxtLink :to="`/kategorie/${category.slug}`" class="category-menu-link">
+        <NuxtLink
+            :to="`/kategorie/${category.slug}`"
+            class="category-menu-link"
+            :class="{ active: isActive(category.slug) }"
+        >
           {{ category.name }}
         </NuxtLink>
       </li>
@@ -18,17 +22,33 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+
+// ✅ Добавляем props для активной категории
+const props = defineProps({
+  activeSlug: {
+    type: String,
+    default: ''
+  }
+})
+
+const route = useRoute()
+
 // Используем useFetch для получения данных с API
 const { data: categories, pending } = await useFetch('https://obchod.tanatar.cz/api/categories')
 
-// Если нужно отсортировать категории (например, по алфавиту или по id)
-// const sortedCategories = computed(() => {
-//   return categories.value?.sort((a, b) => a.name.localeCompare(b.name)) || []
-// })
+// ✅ Функция проверки активной категории
+const isActive = (slug) => {
+  // Если передан activeSlug через props - используем его
+  if (props.activeSlug) {
+    return props.activeSlug === slug
+  }
+  // Иначе проверяем по текущему маршруту (для страницы категории)
+  return route.params.slug === slug
+}
 </script>
 
 <style scoped>
-/* ... (стили остаются те же) ... */
 .category-menu {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -76,6 +96,21 @@ const { data: categories, pending } = await useFetch('https://obchod.tanatar.cz/
   padding-left: 20px;
 }
 
+/* ===== ✅ Активная категория (серая) ===== */
+.category-menu-link.active {
+  background-color: #f1f5f9;
+  color: #6b7280;
+  cursor: default;
+  border-left: 3px solid #94a3b8;
+  padding-left: 13px; /* компенсируем border */
+}
+
+.category-menu-link.active:hover {
+  background-color: #f1f5f9;
+  color: #6b7280;
+  padding-left: 13px;
+}
+
 /* ===== Скелетон загрузки ===== */
 .category-menu-skeleton {
   padding: 10px 16px;
@@ -95,5 +130,13 @@ const { data: categories, pending } = await useFetch('https://obchod.tanatar.cz/
 @keyframes loading {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .category-menu-link {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
 }
 </style>

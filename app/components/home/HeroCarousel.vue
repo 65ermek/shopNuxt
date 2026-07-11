@@ -68,7 +68,6 @@ const slides = ref([
     subtitle: 'Pro firmy i jednotlivce',
     title: 'Množstevní slevy již od 5 ks',
     buttonText: 'Více informací',
-    link: '/dodavatel'
   }
 ])
 

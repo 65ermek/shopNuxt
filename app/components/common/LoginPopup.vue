@@ -55,12 +55,18 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useAuthStore } from '~/stores/authStore'
+import { useCartStore } from '~/stores/cartStore'
 
 const props = defineProps({
   isVisible: Boolean
 })
 
 const emit = defineEmits(['close', 'login', 'forgot-password', 'register'])
+
+// Используем хранилища
+const authStore = useAuthStore()
+const cartStore = useCartStore()
 
 const form = ref({
   email: '',
@@ -91,7 +97,7 @@ const loadSavedEmail = () => {
   }
 }
 
-// ===== ОБРАБОТЧИК ВХОДА =====
+// ===== ОБРАБОТЧИК ВХОДА (обновленный) =====
 const handleLogin = async () => {
   // Валидация
   if (!form.value.email || !form.value.password) {
@@ -103,6 +109,7 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
+    // 1. Отправляем запрос на вход
     const response = await fetch('https://obchod.tanatar.cz/api/customers/login', {
       method: 'POST',
       headers: {
@@ -120,18 +127,51 @@ const handleLogin = async () => {
       // ✅ Успешный вход
       saveEmailToStorage()
 
-      // ✅ Передаем данные в родительский компонент
+      // 2. Сохраняем данные в authStore
+      authStore.token = data.token
+      authStore.customer = data.customer
+
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('customer', JSON.stringify(data.customer))
+
+      console.log('✅ Вход выполнен:', data.customer.email)
+
+      // 3. ✅ ВАЖНО: Объединяем гостевую корзину с пользователем
+      try {
+        console.log('🔄 Начинаем объединение корзины...')
+
+        // Проверяем, есть ли гостевые товары
+        const hasGuestItems = cartStore.items.some(item =>
+            item.session_id && !item.customer_id
+        )
+
+        if (hasGuestItems) {
+          console.log('📦 Обнаружены гостевые товары, объединяем...')
+          await cartStore.mergeCartWithUser(data.customer.id, data.customer.email)
+          console.log('✅ Корзина успешно объединена')
+        } else {
+          console.log('ℹ️ Нет гостевых товаров для объединения')
+          // Просто обновляем корзину
+          await cartStore.fetchCart()
+        }
+      } catch (mergeError) {
+        console.error('❌ Ошибка объединения корзины:', mergeError)
+        // Показываем ошибку, но не блокируем вход
+        errorMessage.value = 'Вход выполнен, но произошла ошибка при объединении корзины'
+        // Все равно передаем данные о входе
+      }
+
+      // 4. Передаем данные в родительский компонент
       emit('login', {
         customer: data.customer,
         token: data.token
       })
 
-      // Очищаем пароль
+      // 5. Очищаем пароль и закрываем попап
       form.value.password = ''
       errorMessage.value = ''
-
-      // ✅ Закрываем попап
       emit('close')
+
     } else {
       errorMessage.value = data.error || 'Přihlášení selhalo'
     }
@@ -171,6 +211,7 @@ watch(() => props.isVisible, (newVal) => {
 </script>
 
 <style scoped>
+/* ... все ваши стили остаются без изменений ... */
 .login-popup {
   background: white;
   border-radius: 12px;

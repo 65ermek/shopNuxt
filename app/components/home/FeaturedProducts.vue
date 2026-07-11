@@ -28,8 +28,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import {  computed } from 'vue'
 import ProductCard from '../products/ProductCard.vue'
+
 
 // Получаем товары с API
 const { data: products, pending } = await useFetch('https://obchod.tanatar.cz/api/products')
