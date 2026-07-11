@@ -210,6 +210,7 @@ import { useRoute } from 'vue-router'
 import { useCartStore } from '~/stores/cartStore'
 import { useWishlistStore } from '~/stores/wishlistStore'
 import SlickSlider from "~/components/common/slickSlider.vue";
+import { formatPrice } from '~/utils/formatPrice'
 
 // ============================================================
 // 📌 ТИПЫ
@@ -424,15 +425,6 @@ const tabs = [
   { key: 'description', label: 'Popis' },
   { key: 'reviews', label: 'Hodnocení' }
 ]
-
-// Форматирование
-const formatPrice = (value: string | number | null | undefined): string => {
-  if (!value) return '0,00'
-  const num = parseFloat(String(value).replace(',', '.'))
-  if (isNaN(num)) return '0,00'
-  return num.toFixed(2).replace('.', ',')
-}
-
 const formatDate = (date?: string): string => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('cs-CZ')
@@ -488,7 +480,7 @@ const addToCart = async (): Promise<void> => {
 const buyNow = (): void => {
   if (!product.value) return
   cartStore.addItem(product.value, 1, 'cart')
-  navigateTo('/kosik')
+  navigateTo('/cart')
 }
 
 const toggleFavorite = async (): Promise<void> => {

@@ -67,14 +67,12 @@
 
           <!-- Цена за единицу -->
           <div class="cart-item-price">
-            <div class="price-with-vat">{{ formatPrice(getProductPrice(item)) }} Kč</div>
-            <div class="price-without-vat">{{ formatPrice(getProductPrice(item) / 1.21) }} Kč bez DPH</div>
+            <div class="price-value">{{ formatPrice(getProductPrice(item)) }} Kč</div>
           </div>
 
           <!-- Итого за позицию -->
           <div class="cart-item-total">
-            <div class="total-with-vat">{{ formatPrice(getProductPrice(item) * (item.quantity || 1)) }} Kč</div>
-            <div class="total-without-vat">{{ formatPrice((getProductPrice(item) * (item.quantity || 1)) / 1.21) }} Kč</div>
+            <div class="total-value">{{ formatPrice(getProductPrice(item) * (item.quantity || 1)) }} Kč</div>
           </div>
 
           <!-- Кнопка удаления -->
@@ -92,12 +90,8 @@
       <!-- Итоговая панель -->
       <div class="cart-summary">
         <div class="summary-left">
-          <div class="summary-row">
-            <span>Celkem bez DPH:</span>
-            <span>{{ formatPrice(cartTotalPriceWithoutVat) }} Kč</span>
-          </div>
           <div class="summary-row summary-total">
-            <span>Celkem včetně DPH:</span>
+            <span>Celkem:</span>
             <span>{{ formatPrice(cartTotalPrice) }} Kč</span>
           </div>
         </div>
@@ -111,7 +105,7 @@
           <NuxtLink to="/" class="continue-shopping">
             ← zpět do obchodu
           </NuxtLink>
-          <NuxtLink to="/checkout" class="checkout-btn">
+          <NuxtLink to="/doprava-a-platba" class="checkout-btn">
             Pokračovat v objednávce
           </NuxtLink>
         </div>
@@ -121,27 +115,22 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
-import ConfirmModal from "~/components/common/ConfirmModal.vue";
+import ConfirmModal from "~/components/common/ConfirmModal.vue"
+import CheckoutStepper from '~/components/CheckoutStepper.vue'
 
 const cartStore = useCartStore()
 const isRemoving = ref(false)
-// ✅ Состояния модалки
+
+// Состояния модалки
 const showModal = ref(false)
 const modalItem = ref(null)
 const modalItemName = ref('')
+
 const cartItems = computed(() => {
   return cartStore.items.filter(item => item.type === 'cart')
 })
-
-// ✅ Отслеживаем изменения cartItems (для диагностики)
-watch(cartItems, (newItems) => {
-  if (newItems && newItems.length > 0) {
-    console.log('📦 Данные корзины (обновлены):', newItems)
-    console.log('🔍 Первый товар:', newItems[0])
-  }
-}, { immediate: true, deep: true })
 
 const cartTotalPrice = computed(() => {
   if (!cartItems.value || !Array.isArray(cartItems.value)) return 0
@@ -152,9 +141,6 @@ const cartTotalPrice = computed(() => {
   }, 0)
 })
 
-const cartTotalPriceWithoutVat = computed(() => {
-  return cartTotalPrice.value / 1.21
-})
 // ✅ Открыть модалку подтверждения
 const openRemoveModal = (item) => {
   modalItem.value = item
@@ -175,8 +161,7 @@ const confirmRemove = async () => {
 
   isRemoving.value = true
   try {
-    const currentType = modalItem.value.type || 'cart'
-    await cartStore.removeItemWithMove(modalItem.value.id, currentType)
+    await cartStore.removeItem(modalItem.value.id)
     closeModal()
   } catch (error) {
     console.error('Chyba při odstraňování položky:', error)
@@ -184,6 +169,7 @@ const confirmRemove = async () => {
     isRemoving.value = false
   }
 }
+
 // ✅ Получение названия товара
 const getProductName = (item) => {
   if (!item) return 'Neznámý produkt'
@@ -244,6 +230,7 @@ const handleImageError = (e) => {
   e.target.src = '/images/no-image.png'
 }
 
+// ✅ Обновление количества
 const updateQuantity = (cartItemId, quantity) => {
   if (!cartItemId) return
   if (quantity <= 0) {
@@ -253,23 +240,11 @@ const updateQuantity = (cartItemId, quantity) => {
   }
 }
 
-const removeItem = async (cartItemId) => {
-  if (!cartItemId || isRemoving.value) return
-
-  isRemoving.value = true
-  try {
-    await cartStore.removeItem(cartItemId)
-  } catch (error) {
-    console.error('Chyba při odstraňování položky:', error)
-  } finally {
-    isRemoving.value = false
-  }
-}
-
 onMounted(() => {
   cartStore.fetchCart()
 })
 </script>
+
 <style scoped>
 /* ===== ОБЩИЕ СТИЛИ ===== */
 .cart-page {

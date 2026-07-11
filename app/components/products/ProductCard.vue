@@ -71,6 +71,7 @@
 import { ref, computed } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
 import { useWishlistStore } from '~/stores/wishlistStore'
+import { formatPrice } from '~/utils/formatPrice'
 
 import noImage from '~/assets/images/no-image.png'
 
@@ -113,14 +114,6 @@ const productImage = computed<string>(() => {
   }
   return noImage
 })
-
-const formatPrice = (value: string | number | null | undefined): string => {
-  if (!value) return '0,00'
-  const cleanValue = typeof value === 'string' ? value.replace(',', '.') : String(value)
-  const number = parseFloat(cleanValue)
-  if (isNaN(number)) return '0,00'
-  return number.toFixed(2).replace('.', ',')
-}
 
 // Добавление в корзину
 const addToCart = async (event: Event): Promise<void> => {

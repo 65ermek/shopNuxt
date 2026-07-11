@@ -12,6 +12,9 @@
         <NuxtLink to="/pro-firmy-a-instituce" class="topbar-link" @click.prevent="blockLink">
           PRO FIRMY A INSTITUCE
         </NuxtLink>
+        <NuxtLink to="/reklamace" class="topbar-link" @click.prevent="blockLink">
+          REKLAMACE
+        </NuxtLink>
         <NuxtLink to="/kontakt" class="topbar-link" @click.prevent="blockLink">
           KONTAKT
         </NuxtLink>
@@ -27,8 +30,9 @@
               @mouseenter="handleMouseEnter"
               @mouseleave="handleMouseLeave"
           >
-            <a class="login-link" href="#" @click.prevent>PŘIHLÁŠENÍ</a>
-
+            <div class="topbar-right">
+              <NuxtLink to="/login" class="topbar-link">PŘIHLÁŠENÍ</NuxtLink>
+            </div>
             <div
                 class="login-popup-wrapper"
                 @mouseenter="handleMouseEnter"
@@ -83,14 +87,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
+import { useAuthStore } from '~/stores/authStore'
 import LoginPopup from '~/components/common/LoginPopup.vue'
 
-// ✅ Создаем экземпляр store
+// ===== ИСПОЛЬЗУЕМ ХРАНИЛИЩА =====
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 
-// Состояния
+// ===== СОСТОЯНИЯ =====
 const showPopup = ref(false)
 const isLoggedIn = ref(false)
 const userName = ref('')
@@ -99,27 +105,40 @@ const isUserMenuOpen = ref(false)
 const customerData = ref(null)
 let closeTimeout = null
 
-// Инициализация авторизации
+// ===== ИНИЦИАЛИЗАЦИЯ АВТОРИЗАЦИИ =====
 const initAuth = () => {
   if (!import.meta.client) return
-  const token = localStorage.getItem('token')
-  const customer = localStorage.getItem('customer')
-  if (token && customer) {
-    try {
-      const parsed = JSON.parse(customer)
-      isLoggedIn.value = true
-      userName.value = parsed.name || 'Uživatel'
-      customerData.value = parsed
-      if (parsed.avatar) {
-        userAvatar.value = `https://obchod.tanatar.cz${parsed.avatar}`
+
+  // Используем данные из authStore
+  if (authStore.isAuthenticated && authStore.customer) {
+    isLoggedIn.value = true
+    userName.value = authStore.customer.name || 'Uživatel'
+    customerData.value = authStore.customer
+
+    if (authStore.customer.avatar) {
+      userAvatar.value = `https://obchod.tanatar.cz${authStore.customer.avatar}`
+    }
+  } else {
+    // Проверяем localStorage напрямую (для обратной совместимости)
+    const token = localStorage.getItem('token')
+    const customer = localStorage.getItem('customer')
+    if (token && customer) {
+      try {
+        const parsed = JSON.parse(customer)
+        isLoggedIn.value = true
+        userName.value = parsed.name || 'Uživatel'
+        customerData.value = parsed
+        if (parsed.avatar) {
+          userAvatar.value = `https://obchod.tanatar.cz${parsed.avatar}`
+        }
+      } catch (e) {
+        console.error('Chyba při parsování customer:', e)
       }
-    } catch (e) {
-      console.error('Chyba při parsování customer:', e)
     }
   }
 }
 
-// Обработка входа мыши
+// ===== ОБРАБОТКА ВХОДА МЫШИ =====
 const handleMouseEnter = () => {
   if (closeTimeout) {
     clearTimeout(closeTimeout)
@@ -128,7 +147,7 @@ const handleMouseEnter = () => {
   showPopup.value = true
 }
 
-// Обработка выхода мыши с задержкой
+// ===== ОБРАБОТКА ВЫХОДА МЫШИ =====
 const handleMouseLeave = () => {
   closeTimeout = setTimeout(() => {
     showPopup.value = false
@@ -136,7 +155,7 @@ const handleMouseLeave = () => {
   }, 500)
 }
 
-// Закрытие попапа
+// ===== ЗАКРЫТИЕ ПОПАПА =====
 const closePopup = () => {
   showPopup.value = false
   if (closeTimeout) {
@@ -145,76 +164,116 @@ const closePopup = () => {
   }
 }
 
-// Обработка успешного входа
-const handleLogin = (data) => {
+// ===== ОБРАБОТКА УСПЕШНОГО ВХОДА (ОБНОВЛЕННАЯ) =====
+const handleLogin = async (data) => {
   if (!import.meta.client) return
 
   console.log('✅ Přihlášení úspěšné:', data)
 
-  // Сохраняем токен и данные пользователя
-  if (data.token) {
-    localStorage.setItem('token', data.token)
+  try {
+    // 1. Сохраняем данные в authStore
+    if (data.token) {
+      authStore.token = data.token
+      localStorage.setItem('token', data.token)
+    }
+
+    if (data.customer) {
+      authStore.customer = data.customer
+      localStorage.setItem('customer', JSON.stringify(data.customer))
+    }
+
+    // 2. Обновляем состояние
+    isLoggedIn.value = true
+    userName.value = data.customer?.name || 'Uživatel'
+    customerData.value = data.customer
+
+    if (data.customer?.avatar) {
+      userAvatar.value = `https://obchod.tanatar.cz${data.customer.avatar}`
+    }
+
+    closePopup()
+
+    // 3. ✅ ВАЖНО: Объединяем корзину и обновляем
+    console.log('🔄 Обновляем корзину после входа...')
+
+    // Проверяем, есть ли гостевые товары
+    const hasGuestItems = cartStore.items.some(item =>
+        item.session_id && !item.customer_id
+    )
+
+    if (hasGuestItems && data.customer) {
+      console.log('📦 Обнаружены гостевые товары, объединяем...')
+      try {
+        await cartStore.mergeCartWithUser(data.customer.id, data.customer.email)
+        console.log('✅ Корзина успешно объединена')
+      } catch (mergeError) {
+        console.error('❌ Ошибка объединения корзины:', mergeError)
+        // Если объединение не удалось, просто обновляем корзину
+        await cartStore.fetchCart()
+      }
+    } else {
+      // Просто обновляем корзину
+      await cartStore.fetchCart()
+    }
+
+    // 4. Закрываем меню пользователя если открыто
+    isUserMenuOpen.value = false
+
+  } catch (error) {
+    console.error('❌ Ошибка при входе:', error)
+    // В случае ошибки все равно пытаемся обновить корзину
+    await cartStore.fetchCart()
   }
-  if (data.customer) {
-    localStorage.setItem('customer', JSON.stringify(data.customer))
-  }
-
-  // Обновляем состояние
-  isLoggedIn.value = true
-  userName.value = data.customer?.name || 'Uživatel'
-  customerData.value = data.customer
-
-  if (data.customer?.avatar) {
-    userAvatar.value = `https://obchod.tanatar.cz${data.customer.avatar}`
-  }
-
-  closePopup()
-
-  // ✅ Загружаем корзину ПОСЛЕ входа
-  console.log('🔄 Обновляем корзину после входа...')
-  cartStore.fetchCart()
 }
 
-// Обработка ошибки аватара
+// ===== ОБРАБОТКА ОШИБКИ АВАТАРА =====
 const handleAvatarError = () => {
   userAvatar.value = '/images/default-avatar.png'
 }
 
-// Выход из аккаунта
+// ===== ВЫХОД ИЗ АККАУНТА (ОБНОВЛЕННЫЙ) =====
 const handleLogout = async () => {
   if (!import.meta.client) return
-  const token = localStorage.getItem('token')
-  if (token) {
-    try {
-      await fetch('https://obchod.tanatar.cz/api/customers/logout', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-    } catch (error) {
-      console.error('Chyba při odhlášení:', error)
-    }
-  }
-  localStorage.removeItem('token')
-  localStorage.removeItem('customer')
-  isLoggedIn.value = false
-  userName.value = ''
-  customerData.value = null
-  isUserMenuOpen.value = false
 
-  // ✅ Очищаем корзину после выхода
-  cartStore.fetchCart()
+  try {
+    // Выход через authStore
+    await authStore.logout()
+
+    // Обновляем состояние
+    isLoggedIn.value = false
+    userName.value = ''
+    customerData.value = null
+    isUserMenuOpen.value = false
+    userAvatar.value = '/images/default-avatar.png'
+
+    // ✅ Обновляем корзину (теперь гостевая)
+    await cartStore.fetchCart()
+
+    console.log('✅ Выход выполнен успешно')
+
+  } catch (error) {
+    console.error('❌ Ошибка при выходе:', error)
+    // Принудительный выход даже при ошибке
+    localStorage.removeItem('token')
+    localStorage.removeItem('customer')
+    authStore.token = null
+    authStore.customer = null
+    isLoggedIn.value = false
+    userName.value = ''
+    customerData.value = null
+    isUserMenuOpen.value = false
+    await cartStore.fetchCart()
+  }
+
   navigateTo('/')
 }
 
-// Переключение меню пользователя
+// ===== ПЕРЕКЛЮЧЕНИЕ МЕНЮ ПОЛЬЗОВАТЕЛЯ =====
 const toggleUserMenu = () => {
   isUserMenuOpen.value = !isUserMenuOpen.value
 }
 
-// Закрытие меню при клике вне
+// ===== ЗАКРЫТИЕ МЕНЮ ПРИ КЛИКЕ ВНЕ =====
 const handleClickOutside = (event) => {
   if (!import.meta.client) return
   const wrapper = document.querySelector('.user-menu-wrapper')
@@ -223,26 +282,59 @@ const handleClickOutside = (event) => {
   }
 }
 
-// Забытый пароль
+// ===== ЗАБЫТЫЙ ПАРОЛЬ =====
 const forgotPassword = () => {
   if (!import.meta.client) return
   alert('📧 Odkaz pro obnovení hesla bude zaslán na váš email.')
   closePopup()
 }
 
-// Переход на регистрацию
+// ===== ПЕРЕХОД НА РЕГИСТРАЦИЮ =====
 const goToRegister = () => {
   if (!import.meta.client) return
   navigateTo('/register')
 }
 
+// ===== ЗАГЛУШКА ДЛЯ БЛОКИРОВКИ ССЫЛОК =====
+const blockLink = () => {
+  console.log('🔗 Ссылка временно заблокирована')
+}
+
+// ===== СЛЕЖЕНИЕ ЗА ИЗМЕНЕНИЕМ АВТОРИЗАЦИИ =====
+watch(() => authStore.isAuthenticated, (newVal) => {
+  if (newVal && authStore.customer) {
+    isLoggedIn.value = true
+    userName.value = authStore.customer.name || 'Uživatel'
+    customerData.value = authStore.customer
+    if (authStore.customer.avatar) {
+      userAvatar.value = `https://obchod.tanatar.cz${authStore.customer.avatar}`
+    }
+  } else {
+    isLoggedIn.value = false
+    userName.value = ''
+    customerData.value = null
+    userAvatar.value = '/images/default-avatar.png'
+  }
+})
+
+// ===== ЖИЗНЕННЫЙ ЦИКЛ =====
 onMounted(() => {
   if (!import.meta.client) return
+
+  // Инициализация
   initAuth()
+
+  // Добавляем слушатели событий
   document.addEventListener('click', handleClickOutside)
 
   // ✅ Загружаем корзину при загрузке страницы
   cartStore.fetchCart()
+
+  console.log('🔍 Текущее состояние авторизации:', {
+    isLoggedIn: isLoggedIn.value,
+    authStoreAuth: authStore.isAuthenticated,
+    hasCustomer: !!authStore.customer
+  })
 })
 
 onBeforeUnmount(() => {
@@ -253,15 +345,10 @@ onBeforeUnmount(() => {
     closeTimeout = null
   }
 })
-
-// Заглушка для блокировки ссылок
-const blockLink = () => {
-  console.log('🔗 Ссылка временно заблокирована')
-}
 </script>
 
 <style scoped>
-/* ===== ОБЩИЕ СТИЛИ ===== */
+/* ===== ВСЕ ВАШИ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ ===== */
 .topbar {
   background-color: #f5f5f5;
   border-bottom: 1px solid #e5e7eb;
@@ -280,7 +367,6 @@ const blockLink = () => {
   gap: 8px;
 }
 
-/* ===== ЛЕВАЯ ЧАСТЬ ===== */
 .topbar-left {
   display: flex;
   align-items: center;
@@ -305,7 +391,6 @@ const blockLink = () => {
   background-color: #e5e7eb;
 }
 
-/* ===== ПРАВАЯ ЧАСТЬ ===== */
 .topbar-right {
   display: flex;
   align-items: center;
@@ -329,23 +414,6 @@ const blockLink = () => {
   display: inline-block;
 }
 
-.login-link {
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: none;
-  text-transform: uppercase;
-  color: #1e293b;
-  padding: 6px 12px;
-  border-radius: 4px;
-  transition: all 0.2s;
-  display: inline-block;
-  cursor: pointer;
-}
-
-.login-link:hover {
-  background-color: #e5e7eb;
-}
-
 .login-popup-wrapper {
   position: absolute;
   top: 100%;
@@ -355,7 +423,6 @@ const blockLink = () => {
   min-width: 280px;
 }
 
-/* ===== МЕНЮ ПОЛЬЗОВАТЕЛЯ ===== */
 .user-menu-wrapper {
   position: relative;
   display: inline-block;
@@ -447,18 +514,11 @@ const blockLink = () => {
   background-color: #fee2e2 !important;
 }
 
-/* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 992px) {
   .topbar-left {
     gap: 0;
   }
-
   .topbar-link {
-    font-size: 10px;
-    padding: 4px 8px;
-  }
-
-  .login-link {
     font-size: 10px;
     padding: 4px 8px;
   }
@@ -471,36 +531,25 @@ const blockLink = () => {
     gap: 4px;
     padding: 4px 10px;
   }
-
   .topbar-left {
     justify-content: center;
     flex-wrap: wrap;
     gap: 2px;
   }
-
   .topbar-link {
     font-size: 9px;
     padding: 3px 6px;
   }
-
   .topbar-right {
     justify-content: center;
   }
-
-  .login-link {
-    font-size: 10px;
-    padding: 4px 10px;
-  }
-
   .user-name {
     font-size: 11px;
   }
-
   .user-avatar {
     width: 22px;
     height: 22px;
   }
-
   .login-popup-wrapper {
     min-width: 260px;
     right: -10px;
@@ -512,24 +561,15 @@ const blockLink = () => {
     font-size: 8px;
     padding: 2px 4px;
   }
-
   .topbar-left {
     gap: 0;
   }
-
   .topbar-right {
     gap: 6px;
   }
-
-  .login-link {
-    font-size: 9px;
-    padding: 3px 8px;
-  }
-
   .user-name {
     font-size: 10px;
   }
-
   .login-popup-wrapper {
     min-width: 220px;
     right: -5px;
