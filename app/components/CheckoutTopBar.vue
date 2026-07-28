@@ -1,23 +1,24 @@
+<!-- components/CheckoutTopBar.vue -->
 <template>
   <div class="topbar">
     <div class="topbar-inner">
       <!-- Левая часть: ссылки (скрываются на мобильных) -->
       <div class="topbar-left">
-        <NuxtLink to="/obchodni-podminky" class="topbar-link" @click.prevent="blockLink">
-          OBCHODNÍ PODMÍNKY
-        </NuxtLink>
-        <NuxtLink to="/jak-objednat" class="topbar-link" @click.prevent="blockLink">
-          JAK OBJEDNAT
-        </NuxtLink>
-        <NuxtLink to="/pro-firmy-a-instituce" class="topbar-link" @click.prevent="blockLink">
-          PRO FIRMY A INSTITUCE
-        </NuxtLink>
-        <NuxtLink to="/reklamace" class="topbar-link" @click.prevent="blockLink">
-          REKLAMACE
-        </NuxtLink>
-        <NuxtLink to="/kontakt" class="topbar-link" @click.prevent="blockLink">
-          KONTAKT
-        </NuxtLink>
+<!--        <NuxtLink to="/obchodni-podminky" class="topbar-link" @click.prevent="blockLink">-->
+<!--          OBCHODNÍ PODMÍNKY-->
+<!--        </NuxtLink>-->
+<!--        <NuxtLink to="/jak-objednat" class="topbar-link" @click.prevent="blockLink">-->
+<!--          JAK OBJEDNAT-->
+<!--        </NuxtLink>-->
+<!--        <NuxtLink to="/pro-firmy-a-instituce" class="topbar-link" @click.prevent="blockLink">-->
+<!--          PRO FIRMY A INSTITUCE-->
+<!--        </NuxtLink>-->
+<!--        <NuxtLink to="/reklamace" class="topbar-link" @click.prevent="blockLink">-->
+<!--          REKLAMACE-->
+<!--        </NuxtLink>-->
+<!--        <NuxtLink to="/kontakt" class="topbar-link" @click.prevent="blockLink">-->
+<!--          KONTAKT-->
+<!--        </NuxtLink>-->
       </div>
 
       <!-- Правая часть: логин или профиль -->
@@ -51,7 +52,6 @@
             </div>
           </div>
         </div>
-
         <!-- Авторизованный пользователь -->
         <div v-else class="user-menu-wrapper">
           <div class="user-dropdown-trigger" @click="toggleUserMenu">
@@ -101,14 +101,11 @@ const authStore = useAuthStore()
 const showPopup = ref(false)
 const isLoggedIn = ref(false)
 const userName = ref('')
-const userAvatar = ref('/images/default-avatar.png')
+const userAvatar = ref('/avatars/default.png')
 const isUserMenuOpen = ref(false)
 const customerData = ref(null)
 let closeTimeout = null
-// ===== ЗАКРЫТИЕ МЕНЮ ПОЛЬЗОВАТЕЛЯ =====
-const closeUserMenu = () => {
-  isUserMenuOpen.value = false
-}
+
 // ===== ИНИЦИАЛИЗАЦИЯ АВТОРИЗАЦИИ =====
 const initAuth = () => {
   if (!import.meta.client) return
@@ -119,8 +116,11 @@ const initAuth = () => {
     userName.value = authStore.customer.name || 'Uživatel'
     customerData.value = authStore.customer
 
+    // ✅ Проверяем, есть ли аватарка
     if (authStore.customer.avatar) {
       userAvatar.value = `https://obchod.tanatar.cz${authStore.customer.avatar}`
+    } else {
+      userAvatar.value = '/avatars/default.png' // Fallback
     }
   } else {
     // Проверяем localStorage напрямую (для обратной совместимости)
@@ -334,11 +334,11 @@ onMounted(() => {
   // ✅ Загружаем корзину при загрузке страницы
   cartStore.fetchCart()
 
-/*  console.log('🔍 Текущее состояние авторизации:', {
-    isLoggedIn: isLoggedIn.value,
-    authStoreAuth: authStore.isAuthenticated,
-    hasCustomer: !!authStore.customer
-  })*/
+  /*  console.log('🔍 Текущее состояние авторизации:', {
+      isLoggedIn: isLoggedIn.value,
+      authStoreAuth: authStore.isAuthenticated,
+      hasCustomer: !!authStore.customer
+    })*/
 })
 
 onBeforeUnmount(() => {

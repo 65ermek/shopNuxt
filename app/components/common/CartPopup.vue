@@ -160,8 +160,8 @@ const confirmRemove = async () => {
 
   isRemoving.value = true
   try {
-    const currentType = modalItem.value.type || 'cart'
-    await cartStore.removeItemWithMove(modalItem.value.id, currentType)
+    // ✅ Используем правильный метод removeItem
+    await cartStore.removeItem(modalItem.value.id)
     emit('item-removed')
     closeModal()
   } catch (error) {

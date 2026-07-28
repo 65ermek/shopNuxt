@@ -116,16 +116,14 @@ export const useCartStore = defineStore('cart', () => {
                         const customer = JSON.parse(customerData)
                         customerId = customer.id
                     } catch (e) {
-                        console.error('Ошибка парсинга customer:', e)
+                        // Убираем console.error
                     }
                 }
             }
 
             const sid = sessionId.value || initSession()
 
-            console.log('🔍 Запрос с токеном:', token ? 'есть' : 'нет')
-            console.log('🔍 customer_id:', customerId)
-            console.log('🔍 session_id:', sid)
+            // Убираем все console.log в этом методе
 
             const params: Record<string, string> = {}
             params['session_id'] = sid || ''
@@ -141,9 +139,6 @@ export const useCartStore = defineStore('cart', () => {
 
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`
-                console.log('🔑 Токен добавлен в заголовки')
-            } else {
-                console.log('⚠️ Токен отсутствует, запрос как гость')
             }
 
             const response = await $fetch<ApiResponse | CartItem[]>(`${API_BASE_URL}/api/cart`, {
@@ -152,7 +147,7 @@ export const useCartStore = defineStore('cart', () => {
                 headers: headers
             })
 
-            console.log('📦 Ответ от сервера:', response)
+            // Убираем console.log('📦 Ответ от сервера:', response)
 
             let cartData: CartItem[] = []
             if (Array.isArray(response)) {
@@ -170,9 +165,7 @@ export const useCartStore = defineStore('cart', () => {
                 type: item.type || 'cart'
             }))
 
-            console.log(`📦 Загружено: ${items.value.length} записей`)
-            console.log('🛒 Корзина:', cartItems.value.length)
-            console.log('❤️ Избранное:', favoriteItems.value.length)
+            // Убираем все console.log в этом методе
 
             saveToLocalStorage()
 
@@ -501,8 +494,59 @@ export const useCartStore = defineStore('cart', () => {
             loading.value = false
         }
     }
+
+    // 📧 Получение email из корзины
+    const getUserEmail = (): string | null => {
+        // Сначала проверяем в items
+        if (items.value && items.value.length > 0) {
+            const firstItem = items.value[0] as CartItem
+            if (firstItem.email) {
+                return firstItem.email
+            }
+        }
+
+        // Затем проверяем в localStorage
+        if (typeof window !== 'undefined') {
+            const savedEmail = localStorage.getItem('customerEmail')
+            if (savedEmail) {
+                return savedEmail
+            }
+        }
+
+        return null
+    }
+
+// 📧 Сохранение email в localStorage
+    const saveUserEmail = (email: string): void => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('customerEmail', email)
+        }
+    }
+
+// 🔄 Обновление email в корзине
+    const updateEmailInCart = async (email: string): Promise<void> => {
+        try {
+            // Обновляем в items
+            items.value = items.value.map(item => ({
+                ...item,
+                email: email
+            }))
+
+            // Сохраняем в localStorage
+            saveUserEmail(email)
+            saveToLocalStorage()
+
+            // Отправляем на сервер
+            await setUserEmail(email)
+
+            console.log('📧 Email обновлен в корзине:', email)
+        } catch (error) {
+            console.error('❌ Ошибка обновления email в корзине:', error)
+            throw error
+        }
+    }
     // 🗑 Очистка корзины
-    const clearCart = async (): Promise<void> => {
+        const clearCart = async (): Promise<void> => {
         try {
             loading.value = true
 
@@ -586,6 +630,9 @@ export const useCartStore = defineStore('cart', () => {
         mergeCartWithUser, // ✅ теперь принимает (customerId, email?)
         clearCart,
         saveToLocalStorage,
-        loadFromLocalStorage
+        loadFromLocalStorage,
+        getUserEmail,
+        saveUserEmail,
+        updateEmailInCart
     }
 })

@@ -92,6 +92,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/authStore'
 import { useCartStore } from '~/stores/cartStore'
 import Breadcrumbs from "~/components/common/Breadcrumbs.vue"
 
@@ -128,6 +129,7 @@ interface LoginResponse {
 // ============================================================
 
 const router = useRouter()
+const authStore = useAuthStore()
 const cartStore = useCartStore()
 
 // Состояния
@@ -191,20 +193,21 @@ const handleLogin = async (): Promise<void> => {
       throw new Error('Neplatná odpověď ze serveru')
     }
 
-    // Сохраняем данные пользователя
-    localStorage.setItem('token', response.token)
-    if (response.customer) {
-      localStorage.setItem('customer', JSON.stringify(response.customer))
-    }
+    // ✅ Сохраняем токен через authStore
+    authStore.setToken(response.token)
+
+    // ✅ Сохраняем данные пользователя через authStore (с приведением типа)
+    authStore.setCustomer(response.customer as any)
+
+    // ✅ Обновляем данные с сервера
+    await authStore.fetchCurrentUser()
 
     // ✅ Объединяем гостевую корзину с пользователем
     if (response.customer?.id) {
       console.log('🔄 Объединение корзины с пользователем...')
-
-      // ✅ Передаем email как строку (он точно есть)
       await cartStore.mergeCartWithUser(
           response.customer.id,
-          response.customer.email // ✅ без undefined
+          response.customer.email
       )
       await cartStore.fetchCart()
     }
@@ -242,7 +245,6 @@ useHead({
   ]
 })
 </script>
-
 
 <style scoped>
 .login-page {
@@ -431,10 +433,6 @@ useHead({
   margin-bottom: 16px;
 }
 
-/* ============================================================
-   КНОПКА
-   ============================================================ */
-
 .submit-btn {
   width: 100%;
   padding: 14px;
@@ -459,10 +457,6 @@ useHead({
   cursor: not-allowed;
 }
 
-/* ============================================================
-   ССЫЛКИ
-   ============================================================ */
-
 .form-links {
   margin-top: 16px;
   text-align: center;
@@ -478,68 +472,6 @@ useHead({
 
 .form-links .link:hover {
   text-decoration: underline;
-}
-
-/* ============================================================
-   СОЦИАЛЬНЫЙ ВХОД (опционально)
-   ============================================================ */
-
-.social-login {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.social-divider {
-  text-align: center;
-  margin-bottom: 16px;
-  position: relative;
-}
-
-.social-divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #e5e7eb;
-}
-
-.social-divider span {
-  background: white;
-  padding: 0 12px;
-  color: #94a3b8;
-  font-size: 13px;
-  position: relative;
-  z-index: 1;
-}
-
-.google-login-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-}
-
-.google-login-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-}
-
-.google-icon {
-  width: 20px;
-  height: 20px;
 }
 
 /* ============================================================
@@ -582,11 +514,6 @@ useHead({
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-  }
-
-  .google-login-btn {
-    font-size: 13px;
-    padding: 10px;
   }
 }
 

@@ -1,6 +1,7 @@
 <template>
   <div class="home-page">
-    <div class="home-grid">
+    <ClientOnly>
+      <div class="home-grid">
       <!-- Левая колонка: Категории (25%) -->
       <aside class="home-sidebar">
         <CategoryMenu />
@@ -52,6 +53,7 @@
         <FeaturedProducts />
       </section>
     </div>
+    </ClientOnly>
   </div>
 </template>
 

@@ -1,7 +1,14 @@
+<!-- app.vue -->
 <template>
-  <NuxtLayout :name="layout">
-    <NuxtPage />
-  </NuxtLayout>
+  <div>
+    <!-- ✅ AppToast должен быть самым первым и вне NuxtLayout -->
+    <AppToast />
+
+    <!-- Основной контент -->
+    <NuxtLayout :name="layout">
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
 </template>
 
 <script setup>

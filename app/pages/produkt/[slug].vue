@@ -44,6 +44,7 @@
                     class="gallery-main-img"
                     @error="handleImageError"
                 />
+                <div class="gallery-zoom-icon">🔍</div>
               </div>
               <div class="gallery-thumbs" v-if="productImages && productImages.length > 1">
                 <button
@@ -201,6 +202,17 @@
         </div>
       </section>
     </div>
+
+    <!-- ✅ Попап добавления в корзину -->
+    <AddToCartPopup
+        v-model:visible="showPopup"
+        :product-name="product?.name || ''"
+        :product-image="product?.image || ''"
+        :product-price="Number(product?.price || 0)"
+        :product-price-without-vat="Number(product?.price || 0) / 1.21"
+        :quantity="1"
+        unit="ks"
+    />
   </div>
 </template>
 
@@ -209,7 +221,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCartStore } from '~/stores/cartStore'
 import { useWishlistStore } from '~/stores/wishlistStore'
+import { useToastStore } from '~/stores/toastStore'
 import SlickSlider from "~/components/common/slickSlider.vue";
+import AddToCartPopup from '~/components/AddToCartPopup.vue'
 import { formatPrice } from '~/utils/formatPrice'
 
 // ============================================================
@@ -295,6 +309,7 @@ interface Product {
 const route = useRoute()
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
+const toastStore = useToastStore()
 
 const API_BASE_URL = 'https://obchod.tanatar.cz'
 
@@ -304,6 +319,7 @@ const loading = ref(true)
 const currentImageIndex = ref(0)
 const activeTab = ref('params')
 const isAdding = ref(false)
+const showPopup = ref(false) // ✅ Добавляем состояние для попапа
 
 // Категория для подсветки
 const categorySlug = computed(() => product.value?.category?.slug || '')
@@ -313,10 +329,10 @@ const isFavorite = computed(() => {
   if (!product.value) return false
   return wishlistStore.isFavorite(product.value.id)
 })
+
 // Переключение на таб "Popis"
 const goToDescriptionTab = (): void => {
   activeTab.value = 'description'
-  // Плавно прокручиваем к табам
   setTimeout(() => {
     const tabsElement = document.querySelector('.product-tabs')
     if (tabsElement) {
@@ -324,7 +340,8 @@ const goToDescriptionTab = (): void => {
     }
   }, 100)
 }
-// ✅ Вычисляем скидку - ИСПРАВЛЕНО!
+
+// ✅ Вычисляем скидку
 const productDiscount = computed(() => {
   if (!product.value) return null
   const oldPrice = parseFloat(String(product.value.old_price))
@@ -425,6 +442,7 @@ const tabs = [
   { key: 'description', label: 'Popis' },
   { key: 'reviews', label: 'Hodnocení' }
 ]
+
 const formatDate = (date?: string): string => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('cs-CZ')
@@ -464,14 +482,31 @@ const fetchProduct = async (): Promise<void> => {
   }
 }
 
-// Действия
+// ✅ Добавление в корзину с попапом
 const addToCart = async (): Promise<void> => {
   if (isAdding.value || !product.value?.in_stock) return
+
   isAdding.value = true
   try {
-    await cartStore.addItem(product.value, 1, 'cart')
+    const productData = {
+      id: product.value.id,
+      name: product.value.name,
+      price: Number(product.value.price),
+      image: product.value.image || null,
+      slug: product.value.slug,
+    }
+
+    await cartStore.addItem(productData, 1, 'cart')
+
+    // ✅ Показываем попап
+    showPopup.value = true
+
   } catch (error) {
-    console.error('Chyba při přidávání do košíku:', error)
+    console.error('❌ Chyba při přidávání do košíku:', error)
+    toastStore.error(
+        'Chyba',
+        'Nepodařilo se přidat produkt do košíku'
+    )
   } finally {
     isAdding.value = false
   }
@@ -502,6 +537,35 @@ const handleThumbError = (e: Event): void => {
   target.src = '/images/no-image.png'
 }
 
+// Слайдер
+const isSliderOpen = ref(false)
+
+const allProductImages = computed(() => {
+  if (!product.value) return []
+
+  const images: (string | { path: string })[] = []
+
+  if (product.value.image) {
+    images.push(product.value.image)
+  }
+
+  if (product.value.images && Array.isArray(product.value.images)) {
+    product.value.images.forEach(img => {
+      images.push(img)
+    })
+  }
+
+  return images
+})
+
+const openSlider = (): void => {
+  isSliderOpen.value = true
+}
+
+const closeSlider = (): void => {
+  isSliderOpen.value = false
+}
+
 // Инициализация
 onMounted(() => {
   fetchProduct()
@@ -517,39 +581,6 @@ useHead(() => ({
     }
   ]
 }))
-// Состояние слайдера
-const isSliderOpen = ref(false)
-
-// Все изображения для слайдера
-const allProductImages = computed(() => {
-  if (!product.value) return []
-
-  const images: (string | { path: string })[] = []
-
-  // Добавляем основное изображение
-  if (product.value.image) {
-    images.push(product.value.image)
-  }
-
-  // Добавляем дополнительные изображения
-  if (product.value.images && Array.isArray(product.value.images)) {
-    product.value.images.forEach(img => {
-      images.push(img)
-    })
-  }
-
-  return images
-})
-
-// Открытие слайдера
-const openSlider = (): void => {
-  isSliderOpen.value = true
-}
-
-// Закрытие слайдера
-const closeSlider = (): void => {
-  isSliderOpen.value = false
-}
 </script>
 
 <style scoped>
@@ -583,8 +614,6 @@ const closeSlider = (): void => {
   color: #1e293b;
   font-weight: 500;
 }
-
-/* ... остальные стили ... */
 
 .product-page {
   padding: 20px 0;
@@ -654,6 +683,7 @@ const closeSlider = (): void => {
   background: #f8f9fa;
   border-radius: 8px;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .gallery-main-img {
@@ -663,6 +693,24 @@ const closeSlider = (): void => {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.gallery-zoom-icon {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 18px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.gallery-main:hover .gallery-zoom-icon {
+  opacity: 1;
 }
 
 .gallery-thumbs {
@@ -754,14 +802,6 @@ const closeSlider = (): void => {
   cursor: pointer;
   font-weight: 500;
   padding: 0;
-}
-
-.description-full {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-  color: #4b5563;
-  line-height: 1.6;
 }
 
 /* Наличие и доставка */
@@ -1000,28 +1040,7 @@ const closeSlider = (): void => {
 .no-reviews {
   color: #6b7280;
 }
-.gallery-main {
-  position: relative;
-  cursor: pointer;
-}
 
-.gallery-zoom-icon {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 18px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-
-.gallery-main:hover .gallery-zoom-icon {
-  opacity: 1;
-}
 /* Адаптивность */
 @media (max-width: 992px) {
   .product-grid {

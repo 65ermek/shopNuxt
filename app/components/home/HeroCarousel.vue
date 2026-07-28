@@ -54,14 +54,14 @@ const slides = ref([
     subtitle: 'Až 20% sleva na první nákup',
     title: 'Kvalitní produkty za skvělé ceny',
     buttonText: 'Nakupovat nyní',
-    link: '/catalog'
+    link: '/katalog'
   },
   {
     image: '/assets/images/rollup.png',
     subtitle: 'Doprava zdarma od 1500 Kč',
     title: 'Široký výběr zboží skladem',
     buttonText: 'Zobrazit akce',
-    link: '/catalog?filter=sale'
+    link: '/katalog?filter=sale'
   },
   {
     image: '/assets/images/cards.png',

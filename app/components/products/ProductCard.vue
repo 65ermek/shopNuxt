@@ -1,48 +1,52 @@
 <template>
   <div class="product-card-wrapper">
-    <NuxtLink :to="`/produkt/${product.slug}`" class="product-card">
-      <div class="product-image">
-        <img
-            :src="productImage"
-            :alt="product.name"
-            loading="lazy"
-            @error="handleImageError"
-        />
-        <span v-if="product.discount" class="product-badge discount">
-          -{{ product.discount }}%
-        </span>
-        <span v-if="product.is_new" class="product-badge new">
-          Novinka
-        </span>
-
-        <!-- Кнопка "Избранное" -->
-        <button
-            class="favorite-btn"
-            :class="{ active: isFavorite }"
-            @click="handleFavoriteClick"
-            :aria-label="isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'"
-            :title="isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'"
-        >
-          <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="heart-icon"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
-          <span class="favorite-tooltip">
-            {{ isFavorite ? 'Odebrat' : 'Přidat' }}
+    <div class="product-card">
+      <NuxtLink :to="`/produkt/${product.slug}`" class="product-image-link">
+        <div class="product-image">
+          <img
+              :src="productImage"
+              :alt="product.name"
+              loading="lazy"
+              @error="handleImageError"
+          />
+          <span v-if="product.discount" class="product-badge discount">
+            -{{ product.discount }}%
           </span>
-        </button>
-      </div>
+          <span v-if="product.is_new" class="product-badge new">
+            Novinka
+          </span>
+
+          <!-- Кнопка "Избранное" -->
+          <button
+              class="favorite-btn"
+              :class="{ active: isFavorite }"
+              @click.stop="handleFavoriteClick"
+              :aria-label="isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'"
+              :title="isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'"
+          >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="heart-icon"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span class="favorite-tooltip">
+              {{ isFavorite ? 'Odebrat' : 'Přidat' }}
+            </span>
+          </button>
+        </div>
+      </NuxtLink>
 
       <div class="product-info">
-        <h3 class="product-name">{{ product.name }}</h3>
+        <NuxtLink :to="`/produkt/${product.slug}`" class="product-name-link">
+          <h3 class="product-name">{{ product.name }}</h3>
+        </NuxtLink>
 
         <div class="product-price-wrapper">
           <p v-if="product.old_price" class="product-price old-price">
@@ -57,13 +61,24 @@
 
         <button
             class="product-add-btn"
-            @click.prevent="addToCart"
+            @click.stop="addToCart"
             :disabled="isAdding || !product.in_stock"
         >
           {{ isAdding ? 'Přidávám...' : (product.in_stock ? 'Do košíku' : 'Nedostupné') }}
         </button>
       </div>
-    </NuxtLink>
+    </div>
+
+    <!-- Попап -->
+    <AddToCartPopup
+        v-model:visible="showPopup"
+        :product-name="product.name"
+        :product-image="product.image"
+        :product-price="Number(product.price)"
+        :product-price-without-vat="Number(product.price) / 1.21"
+        :quantity="1"
+        unit="ks"
+    />
   </div>
 </template>
 
@@ -71,6 +86,8 @@
 import { ref, computed } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
 import { useWishlistStore } from '~/stores/wishlistStore'
+import { useToastStore } from '~/stores/toastStore'
+import AddToCartPopup from '~/components/AddToCartPopup.vue'
 import { formatPrice } from '~/utils/formatPrice'
 
 import noImage from '~/assets/images/no-image.png'
@@ -97,7 +114,10 @@ const props = defineProps<{
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
-const isAdding = ref<boolean>(false)
+const toastStore = useToastStore()
+
+const isAdding = ref(false)
+const showPopup = ref(false)
 
 // Проверяем, есть ли товар в избранном
 const isFavorite = computed<boolean>(() => {
@@ -116,18 +136,34 @@ const productImage = computed<string>(() => {
 })
 
 // Добавление в корзину
-const addToCart = async (event: Event): Promise<void> => {
-  event?.preventDefault()
-  event?.stopPropagation()
-
+const addToCart = async () => {
   if (isAdding.value || !props.product.in_stock) return
 
-  isAdding.value = true
   try {
-    await cartStore.addItem(props.product, 1, 'cart')
-    console.log('✅ Produkt přidán do košíku:', props.product.name)
+    isAdding.value = true
+
+    // ✅ Используем props.product напрямую (приводим к нужному типу)
+    const productData = {
+      id: props.product.id,
+      name: props.product.name,
+      price: Number(props.product.price),
+      image: props.product.image || null,
+      slug: props.product.slug,
+      unit: props.product.unit,
+      in_stock: props.product.in_stock,
+    }
+
+    await cartStore.addItem(productData as any, 1, 'cart')
+
+    // ✅ Показываем попап
+    showPopup.value = true
+
   } catch (error) {
-    console.error('Chyba při přidávání do košíku:', error)
+    console.error('❌ Chyba při přidávání do košíku:', error)
+    toastStore.error(
+        'Chyba',
+        'Nepodařilo se přidat produkt do košíku'
+    )
   } finally {
     isAdding.value = false
   }
@@ -178,13 +214,18 @@ const handleImageError = (e: Event): void => {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
+.product-image-link {
+  display: block;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
 .product-image {
   position: relative;
   width: 100%;
   padding-top: 75%;
   background: #f8f9fa;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .product-image img {
@@ -297,6 +338,11 @@ const handleImageError = (e: Event): void => {
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+.product-name-link {
+  text-decoration: none;
+  color: inherit;
 }
 
 .product-name {

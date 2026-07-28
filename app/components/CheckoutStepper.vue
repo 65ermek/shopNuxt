@@ -1,18 +1,29 @@
+<!-- components/CheckoutStepper.vue -->
 <template>
   <div class="checkout-stepper">
-    <div class="stepper-steps">
+    <div class="stepper-container">
       <div
           v-for="(step, index) in steps"
           :key="index"
-          class="stepper-step"
+          class="step-item"
           :class="{
-          active: index === currentStep,
-          completed: index < currentStep
+          'step-active': index + 1 === currentStep,
+          'step-completed': index + 1 < currentStep,
+          'step-disabled': index + 1 > currentStep
         }"
       >
-        <div class="step-number">{{ index + 1 }}</div>
-        <span class="step-label">{{ step.label }}</span>
-        <div v-if="index < steps.length - 1" class="step-line"></div>
+        <NuxtLink
+            :to="step.route"
+            class="step-link"
+            :class="{
+            'step-link-disabled': index + 1 > currentStep
+          }"
+            :event="index + 1 <= currentStep ? 'click' : ''"
+        >
+          <span class="step-number">{{ index + 1 }}.</span>
+          <span class="step-label">{{ step.label }}</span>
+        </NuxtLink>
+        <span v-if="index < steps.length - 1" class="step-separator">/</span>
       </div>
     </div>
   </div>
@@ -22,165 +33,159 @@
 defineProps({
   currentStep: {
     type: Number,
-    default: 0 // 0 = Košík, 1 = Doprava a platba, 2 = Dodací údaje, 3 = Rekapitulace
+    required: true,
+    default: 1
   }
 })
 
 const steps = [
-  { label: 'Nákupní košík' },
-  { label: 'Doprava a platba' },
-  { label: 'Dodací údaje' },
-  { label: 'Rekapitulace objednávky' }
+  { label: 'Nákupní košík', route: '/cart' },
+  { label: 'Doprava a platba', route: '/doprava-a-platba' },
+  { label: 'Dodací údaje', route: '/dodaci-udaje' },
+  { label: 'Rekapitulace objednávky', route: '/rekapitulace' }
 ]
 </script>
 
 <style scoped>
 .checkout-stepper {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   padding: 16px 0;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.stepper-steps {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 800px;
-  margin: 0 auto;
-  position: relative;
-}
-
-.stepper-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  position: relative;
-  flex: 1;
-}
-
-.stepper-step:last-child {
-  flex: 0 0 auto;
-}
-
-.step-number {
+.stepper-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #e5e7eb;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  cursor: default;
+}
+
+/* Активная ссылка (текущий шаг) */
+.step-active .step-link {
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: default;
+}
+
+.step-active .step-number {
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+/* Пройденные шаги */
+.step-completed .step-link {
+  color: #1a1a1a;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.step-completed .step-link:hover {
+  background: #f3f4f6;
+}
+
+.step-completed .step-number {
+  color: #1a1a1a;
+}
+
+/* Будущие шаги (недоступные) */
+.step-disabled .step-link {
+  color: #9ca3af;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.step-disabled .step-number {
+  color: #9ca3af;
+}
+
+/* Стили для номеров */
+.step-number {
+  font-weight: 500;
   color: #6b7280;
-  font-size: 14px;
-  font-weight: 700;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-/* Активный шаг */
-.stepper-step.active .step-number {
-  background-color: #007bff;
-  color: #ffffff;
-  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.15);
-}
-
-.stepper-step.active .step-label {
-  color: #1e293b;
-  font-weight: 700;
-}
-
-/* Завершённый шаг */
-.stepper-step.completed .step-number {
-  background-color: #10b981;
-  color: #ffffff;
-}
-
-.stepper-step.completed .step-number::after {
-  content: '✓';
-  font-size: 14px;
-}
-
-.stepper-step.completed .step-number span {
-  display: none;
+  transition: color 0.2s;
+  font-size: 15px;
 }
 
 .step-label {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 500;
-  transition: color 0.3s ease;
-  white-space: nowrap;
+  transition: color 0.2s;
+  font-size: 15px;
 }
 
-/* Линия между шагами */
-.step-line {
-  flex: 1;
-  height: 2px;
-  background-color: #e5e7eb;
-  margin: 0 12px;
-  min-width: 20px;
-  transition: background-color 0.3s ease;
+/* Разделитель между шагами */
+.step-separator {
+  color: #d1d5db;
+  font-size: 14px;
+  margin: 0 4px;
+  user-select: none;
 }
 
-/* Активная линия */
-.stepper-step.active .step-line,
-.stepper-step.completed .step-line {
-  background-color: #007bff;
-}
-
-/* ===== АДАПТИВНОСТЬ ===== */
+/* Адаптивность */
 @media (max-width: 768px) {
-  .stepper-steps {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 0;
-    padding: 4px 0;
+  .stepper-container {
+    gap: 4px;
   }
 
-  .stepper-step {
-    flex: 0 0 auto;
-    gap: 6px;
+  .step-link {
+    font-size: 13px;
+    padding: 4px 6px;
   }
 
   .step-number {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .step-label {
-    font-size: 11px;
-    white-space: nowrap;
+    font-size: 13px;
   }
 
-  .step-line {
-    min-width: 16px;
-    margin: 0 6px;
-  }
-
-  .stepper-step .step-label {
-    display: block;
+  .step-separator {
+    font-size: 12px;
+    margin: 0 2px;
   }
 }
 
 @media (max-width: 480px) {
-  .checkout-stepper {
-    padding: 12px 0;
+  .stepper-container {
+    gap: 2px;
+  }
+
+  .step-link {
+    font-size: 11px;
+    padding: 3px 4px;
   }
 
   .step-number {
-    width: 24px;
-    height: 24px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .step-label {
-    font-size: 9px;
+    font-size: 11px;
   }
 
-  .step-line {
-    min-width: 10px;
-    margin: 0 4px;
+  .step-separator {
+    font-size: 10px;
+    margin: 0 1px;
   }
 }
 </style>

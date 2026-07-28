@@ -1,6 +1,7 @@
+<!-- pages/cart/index.vue -->
 <template>
   <div class="cart-page">
-    <CheckoutStepper :current-step="0" />
+    <CheckoutStepper :current-step="1" />
 
     <h1 class="cart-page-title">Nákupní košík</h1>
 
@@ -14,15 +15,6 @@
 
     <!-- Корзина с товарами -->
     <div v-else class="cart-content">
-      <!-- Шапка таблицы -->
-      <div class="cart-header">
-        <span class="cart-header-product">Produkt</span>
-        <span class="cart-header-quantity">Množství</span>
-        <span class="cart-header-price">Cena za jednotku</span>
-        <span class="cart-header-total">Celkem</span>
-        <span class="cart-header-remove"></span>
-      </div>
-
       <!-- Список товаров -->
       <div class="cart-items">
         <div
@@ -30,49 +22,51 @@
             :key="item?.id || Math.random()"
             class="cart-item"
         >
-          <!-- Продукт -->
-          <div class="cart-item-product">
-            <div class="cart-item-image">
-              <img
-                  :src="getProductImage(item)"
-                  :alt="getProductName(item)"
-                  loading="lazy"
-                  @error="handleImageError"
-              />
-            </div>
+          <div class="cart-item-main">
+            <!-- Информация о товаре -->
             <div class="cart-item-info">
-              <NuxtLink :to="`/produkt/${getProductSlug(item)}`" class="cart-item-name">
-                {{ getProductName(item) }}
-              </NuxtLink>
+              <div class="cart-item-image">
+                <img
+                    :src="getProductImage(item)"
+                    :alt="getProductName(item)"
+                    loading="lazy"
+                    @error="handleImageError"
+                />
+              </div>
+              <div class="cart-item-details">
+                <NuxtLink :to="`/produkt/${getProductSlug(item)}`" class="cart-item-name">
+                  {{ getProductName(item) }}
+                </NuxtLink>
+              </div>
             </div>
-          </div>
 
-          <!-- Количество -->
-          <div class="cart-item-quantity">
-            <button
-                class="qty-btn"
-                @click="updateQuantity(item.id, (item.quantity || 1) - 1)"
-                :disabled="(item.quantity || 1) <= 1"
-            >
-              −
-            </button>
-            <span class="qty-value">{{ item.quantity || 1 }}</span>
-            <button
-                class="qty-btn"
-                @click="updateQuantity(item.id, (item.quantity || 1) + 1)"
-            >
-              +
-            </button>
-          </div>
+            <!-- Количество -->
+            <div class="cart-item-quantity">
+              <button
+                  class="qty-btn"
+                  @click="updateQuantity(item.id, (item.quantity || 1) - 1)"
+                  :disabled="(item.quantity || 1) <= 1"
+              >
+                −
+              </button>
+              <span class="qty-value">{{ item.quantity || 1 }}</span>
+              <button
+                  class="qty-btn"
+                  @click="updateQuantity(item.id, (item.quantity || 1) + 1)"
+              >
+                +
+              </button>
+            </div>
 
-          <!-- Цена за единицу -->
-          <div class="cart-item-price">
-            <div class="price-value">{{ formatPrice(getProductPrice(item)) }} Kč</div>
-          </div>
+            <!-- Цена за единицу -->
+            <div class="cart-item-price">
+              <div class="price-value">{{ formatPrice(getProductPrice(item)) }} Kč / ks</div>
+            </div>
 
-          <!-- Итого за позицию -->
-          <div class="cart-item-total">
-            <div class="total-value">{{ formatPrice(getProductPrice(item) * (item.quantity || 1)) }} Kč</div>
+            <!-- Итого за позицию -->
+            <div class="cart-item-total">
+              <div class="total-value">{{ formatPrice(getProductPrice(item) * (item.quantity || 1)) }} Kč</div>
+            </div>
           </div>
 
           <!-- Кнопка удаления -->
@@ -89,21 +83,24 @@
 
       <!-- Итоговая панель -->
       <div class="cart-summary">
-        <div class="summary-left">
-          <div class="summary-row summary-total">
-            <span>Celkem:</span>
-            <span>{{ formatPrice(cartTotalPrice) }} Kč</span>
+        <!-- Блок с итоговой ценой -->
+        <div class="summary-price-block">
+          <div class="summary-price-row">
+            <span class="summary-price-label">Celková cena:</span>
+            <span class="summary-price-value">{{ formatPrice(cartTotalPrice) }} Kč</span>
           </div>
         </div>
+
         <ConfirmModal
             :is-visible="showModal"
             :item-name="modalItemName"
             @confirm="confirmRemove"
             @cancel="closeModal"
         />
+
         <div class="summary-actions">
           <NuxtLink to="/" class="continue-shopping">
-            ← zpět do obchodu
+            ← Zpět do obchodu
           </NuxtLink>
           <NuxtLink to="/doprava-a-platba" class="checkout-btn">
             Pokračovat v objednávce
@@ -115,6 +112,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'checkout' })
 import { computed, onMounted, ref } from 'vue'
 import { useCartStore } from '~/stores/cartStore'
 import ConfirmModal from "~/components/common/ConfirmModal.vue"
@@ -132,6 +130,7 @@ const cartItems = computed(() => {
   return cartStore.items.filter(item => item.type === 'cart')
 })
 
+// Общая сумма
 const cartTotalPrice = computed(() => {
   if (!cartItems.value || !Array.isArray(cartItems.value)) return 0
   return cartItems.value.reduce((sum, item) => {
@@ -141,21 +140,21 @@ const cartTotalPrice = computed(() => {
   }, 0)
 })
 
-// ✅ Открыть модалку подтверждения
+// Открыть модалку подтверждения
 const openRemoveModal = (item) => {
   modalItem.value = item
   modalItemName.value = getProductName(item) || 'tuto položku'
   showModal.value = true
 }
 
-// ✅ Закрыть модалку
+// Закрыть модалку
 const closeModal = () => {
   showModal.value = false
   modalItem.value = null
   modalItemName.value = ''
 }
 
-// ✅ Подтверждение удаления
+// Подтверждение удаления
 const confirmRemove = async () => {
   if (!modalItem.value?.id || isRemoving.value) return
 
@@ -170,7 +169,7 @@ const confirmRemove = async () => {
   }
 }
 
-// ✅ Получение названия товара
+// Получение названия товара
 const getProductName = (item) => {
   if (!item) return 'Neznámý produkt'
   if (item.name) return item.name
@@ -179,7 +178,7 @@ const getProductName = (item) => {
   return 'Neznámý produkt'
 }
 
-// ✅ Получение slug товара
+// Получение slug товара
 const getProductSlug = (item) => {
   if (!item) return '#'
   if (item.slug) return item.slug
@@ -187,7 +186,7 @@ const getProductSlug = (item) => {
   return '#'
 }
 
-// ✅ Получение цены
+// Получение цены
 const getProductPrice = (item) => {
   if (!item) return 0
   if (item.price !== undefined && item.price !== null) {
@@ -205,7 +204,7 @@ const getProductPrice = (item) => {
   return 0
 }
 
-// ✅ Получение изображения
+// Получение изображения
 const getProductImage = (item) => {
   if (!item) return '/images/no-image.png'
   if (item.image) {
@@ -230,7 +229,7 @@ const handleImageError = (e) => {
   e.target.src = '/images/no-image.png'
 }
 
-// ✅ Обновление количества
+// Обновление количества
 const updateQuantity = (cartItemId, quantity) => {
   if (!cartItemId) return
   if (quantity <= 0) {
@@ -285,7 +284,7 @@ onMounted(() => {
 .cart-empty-btn {
   display: inline-block;
   padding: 12px 32px;
-  background-color: #007bff;
+  background-color: #e11d48;
   color: white;
   text-decoration: none;
   border-radius: 6px;
@@ -294,87 +293,61 @@ onMounted(() => {
 }
 
 .cart-empty-btn:hover {
-  background-color: #0056b3;
-}
-
-/* ===== ШАПКА ТАБЛИЦЫ ===== */
-.cart-header {
-  display: grid;
-  grid-template-columns: 3fr 1fr 1.2fr 1fr 40px;
-  gap: 16px;
-  padding: 12px 16px;
-  background-color: #f8fafc;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 16px;
-  align-items: center;
-}
-
-.cart-header-product {
-  grid-column: 1 / 2;
-}
-
-.cart-header-quantity {
-  grid-column: 2 / 3;
-  text-align: center;
-}
-
-.cart-header-price {
-  grid-column: 3 / 4;
-  text-align: right;
-}
-
-.cart-header-total {
-  grid-column: 4 / 5;
-  text-align: right;
-}
-
-.cart-header-remove {
-  grid-column: 5 / 6;
+  background-color: #be123c;
 }
 
 /* ===== ТОВАРЫ ===== */
 .cart-items {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .cart-item {
-  display: grid;
-  grid-template-columns: 3fr 1fr 1.2fr 1fr 40px;
-  gap: 16px;
-  align-items: center;
+  display: flex;
+  align-items: stretch;
   background: white;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-  transition: box-shadow 0.2s;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 20px;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
 }
 
 .cart-item:hover {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  background-color: #fafafa;
 }
 
-/* ===== ПРОДУКТ ===== */
-.cart-item-product {
+.cart-item-main {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 20px;
+}
+
+/* ===== ИНФОРМАЦИЯ О ТОВАРЕ ===== */
+.cart-item-info {
   display: flex;
   align-items: center;
   gap: 16px;
-  grid-column: 1 / 2;
+  flex: 2;
+  min-width: 0;
 }
 
 .cart-item-image {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 6px;
   overflow: hidden;
   background: #f8f9fa;
   flex-shrink: 0;
+  border: 1px solid #f1f5f9;
 }
 
 .cart-item-image img {
@@ -383,7 +356,8 @@ onMounted(() => {
   object-fit: cover;
 }
 
-.cart-item-info {
+.cart-item-details {
+  flex: 1;
   min-width: 0;
 }
 
@@ -397,6 +371,7 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.4;
 }
 
 .cart-item-name:hover {
@@ -408,14 +383,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0.8;
   justify-content: center;
-  grid-column: 2 / 3;
 }
 
 .qty-btn {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #e5e7eb;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d1d5db;
   background: white;
   border-radius: 4px;
   cursor: pointer;
@@ -430,7 +405,8 @@ onMounted(() => {
 
 .qty-btn:hover:not(:disabled) {
   background-color: #f1f5f9;
-  border-color: #007bff;
+  border-color: #e11d48;
+  color: #e11d48;
 }
 
 .qty-btn:disabled {
@@ -441,46 +417,36 @@ onMounted(() => {
 .qty-value {
   font-size: 15px;
   font-weight: 600;
-  min-width: 24px;
+  min-width: 30px;
   text-align: center;
 }
 
 /* ===== ЦЕНЫ ===== */
 .cart-item-price {
-  grid-column: 3 / 4;
+  flex: 1.2;
   text-align: right;
 }
 
-.price-with-vat {
+.price-value {
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;
 }
 
-.price-without-vat {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
 .cart-item-total {
-  grid-column: 4 / 5;
+  flex: 1;
   text-align: right;
+  padding-left: 10px;
 }
 
-.total-with-vat {
+.total-value {
   font-size: 15px;
   font-weight: 700;
   color: #1e293b;
 }
 
-.total-without-vat {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
 /* ===== КНОПКА УДАЛЕНИЯ ===== */
 .cart-item-remove {
-  grid-column: 5 / 6;
   width: 32px;
   height: 32px;
   border: none;
@@ -493,8 +459,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  justify-self: center;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .cart-item-remove:hover:not(:disabled) {
@@ -510,33 +476,32 @@ onMounted(() => {
 /* ===== ИТОГОВАЯ ПАНЕЛЬ ===== */
 .cart-summary {
   margin-top: 24px;
-  padding: 20px 24px;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #f1f5f9;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 16px;
 }
 
-.summary-left {
+/* Блок с итоговой ценой - светло-серый фон */
+.summary-price-block {
+  background: #f3f4f6;
+  padding: 16px 24px;
+  border-radius: 8px;
+}
+.summary-price-row {
   display: flex;
-  gap: 24px;
-  align-items: baseline;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 20px;
 }
 
-.summary-row {
-  display: flex;
-  gap: 12px;
-  font-size: 14px;
-  color: #4b5563;
+.summary-price-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
-.summary-total {
-  font-size: 18px;
+.summary-price-value {
+  font-size: 20px;
   font-weight: 700;
   color: #1e293b;
 }
@@ -544,7 +509,9 @@ onMounted(() => {
 .summary-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .continue-shopping {
@@ -552,6 +519,7 @@ onMounted(() => {
   text-decoration: none;
   font-size: 14px;
   transition: color 0.2s;
+  padding: 8px 12px;
 }
 
 .continue-shopping:hover {
@@ -561,7 +529,7 @@ onMounted(() => {
 .checkout-btn {
   display: inline-block;
   padding: 12px 32px;
-  background-color: #007bff;
+  background-color: #6b7280;
   color: white;
   text-decoration: none;
   border-radius: 6px;
@@ -571,34 +539,32 @@ onMounted(() => {
 }
 
 .checkout-btn:hover {
-  background-color: #0056b3;
+  background-color: #007bff;
 }
 
 /* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 992px) {
-  .cart-header {
-    display: none;
-  }
-
   .cart-item {
-    grid-template-columns: 1fr;
-    gap: 12px;
     padding: 16px;
-    position: relative;
   }
 
-  .cart-item-product {
-    grid-column: 1 / 2;
-    padding-right: 40px;
+  .cart-item-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .cart-item-info {
+    flex: 1;
   }
 
   .cart-item-quantity {
-    grid-column: 1 / 2;
+    flex: 1;
     justify-content: flex-start;
   }
 
   .cart-item-price {
-    grid-column: 1 / 2;
+    flex: 1;
     text-align: left;
     display: flex;
     gap: 16px;
@@ -607,38 +573,41 @@ onMounted(() => {
   }
 
   .cart-item-total {
-    grid-column: 1 / 2;
+    flex: 1;
     text-align: left;
     display: flex;
     gap: 16px;
     align-items: baseline;
     flex-wrap: wrap;
+    padding-left: 0;
   }
 
   .cart-item-remove {
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-    grid-column: auto;
-    justify-self: auto;
   }
 
   .cart-summary {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px 20px;
+    gap: 12px;
   }
 
-  .summary-left {
-    justify-content: space-between;
+  .summary-price-block {
+    padding: 14px 20px;
+  }
+
+  .summary-price-label {
+    font-size: 15px;
+  }
+
+  .summary-price-value {
+    font-size: 18px;
   }
 
   .summary-actions {
     flex-direction: column;
     width: 100%;
+    align-items: stretch;
   }
 
   .checkout-btn {
@@ -648,6 +617,7 @@ onMounted(() => {
 
   .continue-shopping {
     text-align: center;
+    width: 100%;
   }
 }
 
@@ -665,8 +635,8 @@ onMounted(() => {
   }
 
   .cart-item-image {
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
   }
 
   .cart-item-name {
@@ -674,31 +644,29 @@ onMounted(() => {
   }
 
   .qty-btn {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     font-size: 14px;
   }
 
-  .summary-left {
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
+  .price-value {
+    font-size: 13px;
   }
 
-  .summary-total {
+  .total-value {
+    font-size: 14px;
+  }
+
+  .summary-price-block {
+    padding: 12px 16px;
+  }
+
+  .summary-price-label {
+    font-size: 14px;
+  }
+
+  .summary-price-value {
     font-size: 16px;
-  }
-
-  .cart-item-product {
-    padding-right: 32px;
-  }
-
-  .cart-item-remove {
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
   }
 }
 </style>
